@@ -1,73 +1,114 @@
-import 'dotenv/config'
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import { z } from 'zod';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import path from 'path';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { z } from "zod";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 
-// Configurable CORS origins via env: ALLOWED_ORIGINS="https://yourdomain.com,https://admin.yourdomain.com"
-const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean)) || [
-  'http://localhost:8081',
-  'http://localhost:8080',
-];
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
-app.use(express.json());
-app.use(morgan('tiny'));
-// Configure Helmet with CSP that allows Supabase auth endpoints
+/** -----------------------
+ * Health first (no dependencies)
+ * ---------------------- */
+app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+/** -----------------------
+ * CORS (strict + supports credentials)
+ * ---------------------- */
+const allowedOrigins =
+  process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? [
+    "http://localhost:5173", // Vite dev default
+    "http://localhost:8080",
+    "http://localhost:8081",
+  ];
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // allow server-to-server / curl / postman (no Origin header)
+      if (!origin) return cb(null, true);
+
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "1mb" }));
+app.use(morgan("tiny"));
+
+/** -----------------------
+ * Security headers (Helmet)
+ * ---------------------- */
 const rawSupabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseCspOrigins = rawSupabaseUrl ? [new URL(rawSupabaseUrl).origin] : ["https://*.supabase.co"];
-app.use(helmet({
-  contentSecurityPolicy: {
-    useDefaults: true,
-    directives: {
-      "default-src": ["'self'"],
-      "base-uri": ["'self'"],
-      "img-src": ["'self'", "data:", "https:"],
-      "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
-      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      "script-src": ["'self'", "'unsafe-inline'"],
-      "connect-src": ["'self'", "https:", "wss:", ...supabaseCspOrigins, "https://*.supabase.co"],
-      "frame-src": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
-      "form-action": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "base-uri": ["'self'"],
+        "img-src": ["'self'", "data:", "https:"],
+        "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "connect-src": ["'self'", "https:", "wss:", ...supabaseCspOrigins, "https://*.supabase.co"],
+        "frame-src": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+        "form-action": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
-// Basic rate limiting
-const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
+/** -----------------------
+ * Rate limit
+ * ---------------------- */
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
-// Serve built frontend assets from Vite's dist directory
-const distDir = path.join(process.cwd(), 'dist');
-app.use(express.static(distDir, { maxAge: '1h' }));
+/** -----------------------
+ * Optional: serve frontend build if exists
+ * ---------------------- */
+const distDir = path.join(process.cwd(), "dist");
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir, { maxAge: "1h" }));
+}
 
+/** -----------------------
+ * Supabase (service role) for backend
+ * ---------------------- */
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
-let supabase: SupabaseClient<any, any, any> | null = null;
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-  console.warn('Supabase env not set. Backend will run in static-only mode.');
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+
+let supabase: SupabaseClient | null = null;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn("⚠️ Supabase env not set. Backend will run in static-only mode.");
 } else {
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 }
 
-// Schemas
+/** -----------------------
+ * Schemas
+ * ---------------------- */
 const profileUpdateSchema = z.object({
   full_name: z.string().min(1).max(120).optional(),
   phone: z.string().min(8).max(20).optional(),
@@ -75,257 +116,253 @@ const profileUpdateSchema = z.object({
 
 const roleUpdateSchema = z.object({
   user_id: z.string().uuid(),
-  role: z.enum(['user','admin']),
+  role: z.enum(["user", "admin"]),
 });
 
-// Helper: get user id from Authorization: Bearer <token>, with optional dev fallback
+const submissionSchema = z.object({
+  user_id: z.string().uuid().nullable().optional(),
+
+  name: z.string().min(1).max(120),
+  mobile: z.string().min(8).max(20),
+  email: z.string().email().max(160),
+  city: z.string().min(1).max(120),
+
+  businessName: z.string().min(1).max(160),
+  businessType: z.string().min(1).max(160),
+  annualTurnover: z.string().min(1).max(160),
+  yearsInBusiness: z.string().min(1).max(60),
+
+  loanAmount: z.string().min(1).max(120),
+  loanPurpose: z.string().min(1).max(200),
+  tenure: z.string().min(1).max(60),
+
+  panNumber: z.string().nullable().optional(),
+  gstNumber: z.string().nullable().optional(),
+
+  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+});
+
+/** -----------------------
+ * Auth helpers
+ * ---------------------- */
 async function getAuthUserId(req: express.Request): Promise<string | null> {
-  try {
-    if (!supabase) return null;
-    const auth = req.header('authorization') || req.header('Authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : null;
-    if (token) {
-      const { data, error } = await supabase.auth.getUser(token);
-      if (error) return null;
-      return data.user?.id ?? null;
-    }
-    if (process.env.ALLOW_DEV_HEADER === 'true') {
-      const devId = req.header('x-user-id');
-      if (devId) return devId;
-    }
-    return null;
-  } catch {
-    return null;
+  if (!supabase) return null;
+
+  const auth = req.header("authorization") || req.header("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+
+  if (token) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error) return null;
+    return data.user?.id ?? null;
   }
+
+  if (process.env.ALLOW_DEV_HEADER === "true") {
+    const devId = req.header("x-user-id");
+    if (devId) return devId;
+  }
+
+  return null;
 }
 
-// Middleware: attach user id derived from JWT (or dev header if enabled)
 app.use(async (req, _res, next) => {
   (req as any).userId = await getAuthUserId(req);
   next();
 });
 
-// Health
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+/** -----------------------
+ * Users
+ * ---------------------- */
+app.get("/api/users/me", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
-// Get my profile
-app.get('/api/users/me', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ error: 'unauthorized' });
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ profile: data });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+  const userId = (req as any).userId;
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.json({ profile: data });
 });
 
-// Update my profile
-app.put('/api/users/me', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ error: 'unauthorized' });
-    const parsed = profileUpdateSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ ...parsed.data })
-      .eq('id', userId)
-      .select('*')
-      .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ profile: data });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+app.put("/api/users/me", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+
+  const userId = (req as any).userId;
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+  const parsed = profileUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ ...parsed.data })
+    .eq("id", userId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ profile: data });
 });
 
-// Admin: update role (caller must be admin)
-app.post('/api/users/role', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const callerId = (req as any).userId;
-    if (!callerId) return res.status(401).json({ error: 'unauthorized' });
-    const { data: caller, error: callerErr } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', callerId)
-      .maybeSingle();
-    if (callerErr) return res.status(500).json({ error: callerErr.message });
-    if (!caller || caller.role !== 'admin') return res.status(403).json({ error: 'forbidden' });
+app.post("/api/users/role", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
-    const parsed = roleUpdateSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ role: parsed.data.role })
-      .eq('id', parsed.data.user_id)
-      .select('*')
-      .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ profile: data });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+  const callerId = (req as any).userId;
+  if (!callerId) return res.status(401).json({ error: "unauthorized" });
+
+  const { data: caller, error: callerErr } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", callerId)
+    .maybeSingle();
+
+  if (callerErr) return res.status(500).json({ error: callerErr.message });
+  if (!caller || caller.role !== "admin") return res.status(403).json({ error: "forbidden" });
+
+  const parsed = roleUpdateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ role: parsed.data.role })
+    .eq("id", parsed.data.user_id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ profile: data });
 });
 
 // Sync: upsert caller into profiles using auth email
-app.post('/api/users/sync', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const callerId = (req as any).userId;
-    if (!callerId) return res.status(401).json({ error: 'unauthorized' });
-    const auth = req.header('authorization') || req.header('Authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : null;
-    if (!token) return res.status(401).json({ error: 'unauthorized' });
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) return res.status(401).json({ error: 'invalid_token' });
+app.post("/api/users/sync", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
-    const email = data.user.email;
-    const { data: upserted, error: upsertErr } = await supabase
-      .from('profiles')
-      .upsert({ id: callerId, email }, { onConflict: 'id' })
-      .select('*')
-      .maybeSingle();
-    if (upsertErr) return res.status(500).json({ error: upsertErr.message });
-    return res.json({ profile: upserted });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+  const callerId = (req as any).userId;
+  if (!callerId) return res.status(401).json({ error: "unauthorized" });
+
+  const auth = req.header("authorization") || req.header("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+  if (!token) return res.status(401).json({ error: "unauthorized" });
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return res.status(401).json({ error: "invalid_token" });
+
+  const email = data.user.email;
+  const { data: upserted, error: upsertErr } = await supabase
+    .from("profiles")
+    .upsert({ id: callerId, email }, { onConflict: "id" })
+    .select("*")
+    .maybeSingle();
+
+  if (upsertErr) return res.status(500).json({ error: upsertErr.message });
+  return res.json({ profile: upserted });
 });
 
-// Submissions schema and admin helpers
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || '')
-  .split(',')
-  .map(e => e.trim().toLowerCase())
+/** -----------------------
+ * Submissions
+ * ---------------------- */
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-const submissionSchema = z.object({
-  user_id: z.string().uuid().nullable().optional(),
-  name: z.string().min(1).max(120),
-  mobile: z.string().min(8).max(20),
-  email: z.string().email().max(160),
-  city: z.string().min(1).max(120),
-  businessName: z.string().min(1).max(160),
-  businessType: z.string().min(1).max(160),
-  annualTurnover: z.string().min(1).max(160),
-  yearsInBusiness: z.string().min(1).max(60),
-  loanAmount: z.string().min(1).max(120),
-  loanPurpose: z.string().min(1).max(200),
-  tenure: z.string().min(1).max(60),
-  panNumber: z.string().nullable().optional(),
-  gstNumber: z.string().nullable().optional(),
-  status: z.enum(['pending','approved','rejected']).default('pending'),
-});
-
 async function isAdminRequest(req: express.Request): Promise<boolean> {
-  try {
-    if (!supabase) return false;
-    const auth = req.header('authorization') || req.header('Authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : null;
-    if (!token) return false;
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) return false;
-    const email = data.user.email?.toLowerCase();
-    if (email && ADMIN_EMAILS.includes(email)) return true;
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .maybeSingle();
-    return profile?.role === 'admin';
-  } catch {
-    return false;
-  }
+  if (!supabase) return false;
+
+  const auth = req.header("authorization") || req.header("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+  if (!token) return false;
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return false;
+
+  const email = data.user.email?.toLowerCase();
+  if (email && ADMIN_EMAILS.includes(email)) return true;
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+  return profile?.role === "admin";
 }
 
-// Public: create submission (allows unauthenticated; uses service role)
-app.post('/api/submissions', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const parsed = submissionSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
+// Public: create submission
+app.post("/api/submissions", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
-    const userId = (req as any).userId; // may be null if unauthenticated
-    const payload = { ...parsed.data, user_id: userId ?? null } as any;
-    const { data, error } = await supabase
-      .from('submissions')
-      .insert(payload)
-      .select('*')
-      .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ submission: data });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+  const parsed = submissionSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+
+  const userId = (req as any).userId; // can be null if unauthenticated
+  const payload = { ...parsed.data, user_id: userId ?? null };
+
+  const { data, error } = await supabase.from("submissions").insert(payload).select("*").maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.json({ submission: data });
 });
 
-// Admin: list all submissions
-app.get('/api/submissions', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const ok = await isAdminRequest(req);
-    if (!ok) return res.status(403).json({ error: 'forbidden' });
-    const { data, error } = await supabase
-      .from('submissions')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ submissions: data || [] });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+// Admin: list submissions
+app.get("/api/submissions", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+
+  const ok = await isAdminRequest(req);
+  if (!ok) return res.status(403).json({ error: "forbidden" });
+
+  const { data, error } = await supabase.from("submissions").select("*").order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.json({ submissions: data || [] });
 });
 
 // Admin: update submission status
-const statusSchema = z.object({ status: z.enum(['pending','approved','rejected']) });
-app.patch('/api/submissions/:id', async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
-    const ok = await isAdminRequest(req);
-    if (!ok) return res.status(403).json({ error: 'forbidden' });
-    const id = req.params.id;
-    const parsed = statusSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
-    const { data, error } = await supabase
-      .from('submissions')
-      .update({ status: parsed.data.status })
-      .eq('id', id)
-      .select('*')
-      .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ submission: data });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || 'server_error' });
-  }
+app.patch("/api/submissions/:id", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+
+  const ok = await isAdminRequest(req);
+  if (!ok) return res.status(403).json({ error: "forbidden" });
+
+  const statusSchema = z.object({ status: z.enum(["pending", "approved", "rejected"]) });
+  const parsed = statusSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+
+  const { data, error } = await supabase
+    .from("submissions")
+    .update({ status: parsed.data.status })
+    .eq("id", req.params.id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.json({ submission: data });
 });
 
-// 404 route for API only
-app.use('/api', (_req, res) => {
-  res.status(404).json({ error: 'not_found' });
-});
+/** -----------------------
+ * 404 for API
+ * ---------------------- */
+app.use("/api", (_req, res) => res.status(404).json({ error: "not_found" }));
 
-// SPA fallback for all non-API routes (serves React app)
+/** -----------------------
+ * SPA fallback if dist exists
+ * ---------------------- */
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(distDir, 'index.html'));
+  if (req.path.startsWith("/api")) return next();
+  if (!fs.existsSync(path.join(distDir, "index.html"))) return res.status(404).send("Not Found");
+  return res.sendFile(path.join(distDir, "index.html"));
 });
 
-// Error handler
+/** -----------------------
+ * Error handler
+ * ---------------------- */
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'server_error' });
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "server_error" });
 });
 
-const port = process.env.PORT ? Number(process.env.PORT) : 8787;
-app.listen(port, () => {
-  console.log(`Backend server listening on http://localhost:${port}`);
-  console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+/** -----------------------
+ * Listen
+ * ---------------------- */
+const PORT = Number(process.env.PORT || 8787);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend listening on port ${PORT}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
+  console.log("Health endpoint enabled at /healthz");
 });
