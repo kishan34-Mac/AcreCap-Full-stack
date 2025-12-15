@@ -240,15 +240,8 @@ export const Navbar = () => {
                 )}
                 {/* Removed Profile from navbar */}
                 {/* <Link to="/profile" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">Profile</Link> */}
-                {isAuthenticated ? (
-                  <button onClick={handleLogout} className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
-                    Logout
-                  </button>
-                ) : (
-                  <Link to="/auth" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
-                    Login
-                  </Link>
-                )}
+                {/* Auth buttons removed here to avoid duplicate Login/Logout; right-side actions handle auth buttons */}
+                {/* Auth buttons removed here to avoid duplicate Login/Logout; right-side actions handle auth buttons */}
               </div>
 
               {/* Right Side Actions */}

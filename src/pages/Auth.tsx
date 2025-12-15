@@ -44,8 +44,7 @@ const Auth = () => {
   })();
   const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
   const defaultDestinationFor = (email?: string | null) => {
-    const em = email?.toLowerCase() || '';
-    return em && ADMIN_EMAILS.includes(em) ? '/admin' : '/dashboard';
+    return '/';
   };
 
   useEffect(() => {
