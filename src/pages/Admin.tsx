@@ -42,8 +42,13 @@ interface SubmissionRow {
 
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
 
-const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || 'https://acrecap-full-stack.onrender.com';
-const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
+const API_BASE_RAW = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim() || 'https://acrecap-full-stack.onrender.com';
+const API_BASE_NO_SLASH = API_BASE_RAW.replace(/\/+$/, '');
+const API_BASE = API_BASE_NO_SLASH.endsWith('/api') ? API_BASE_NO_SLASH : `${API_BASE_NO_SLASH}/api`;
+const apiUrl = (path: string) => {
+  const p = path.replace(/^\/+/, '');
+  return `${API_BASE}/${p}`;
+};
 const getToken = async (): Promise<string | null> => {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -155,29 +160,99 @@ export default function Admin() {
     return [];
   };
   
-  // Helper: merge DB and local lists
-  const mergeSubmissions = (dbRows: SubmissionRow[], _localRows: SubmissionRow[]): SubmissionRow[] => {
+  // Helper: merge DB lists (local fallback removed)
+  const mergeSubmissions = (dbRows: SubmissionRow[]): SubmissionRow[] => {
     return [...dbRows].sort((a,b) => (a.created_at > b.created_at ? -1 : 1));
   };
   
-  // Helper: fetch all submissions from DB using pagination to avoid default limits
+  // Helper: fetch all submissions from DB
   const fetchAllSubmissions = async (): Promise<SubmissionRow[]> => {
     try {
       const token = await getToken();
-      const res = await fetch(apiUrl('/api/submissions'), {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const res = await fetch(apiUrl('submissions'), {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-      const rows = (json?.submissions || []) as SubmissionRow[];
-      return rows;
+      const dbRows: SubmissionRow[] = (json?.submissions || []) as SubmissionRow[];
+      return mergeSubmissions(dbRows);
     } catch (e: any) {
-      toast({ title: 'Load failed', description: e?.message || 'Unable to load submissions from backend', variant: 'destructive' });
+      toast({ title: 'Failed to load submissions', description: e?.message || 'Unknown error', variant: 'destructive' });
       return [];
     }
   };
-  
+
   // (removed) mergeSubmissions that previously merged local rows
+  useEffect(() => {
+    let mounted = true;
+    let channel: any;
+    const load = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const email = sessionData.session?.user?.email?.toLowerCase();
+      if (!email || !ADMIN_EMAILS.includes(email)) {
+        toast({ title: 'Access denied', description: 'You are not authorized to view this page.', variant: 'destructive' });
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
+      }
+      // Ensure admin email exists in admin_emails table for RLS-based privileges
+      try {
+        const { data: adminRow } = await (supabase as any)
+          .from('admin_emails')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle();
+        if (!adminRow) {
+          await (supabase as any)
+            .from('admin_emails')
+            .insert({ email });
+        }
+      } catch (e) {
+        // non-blocking if table/policy prevents insert; submission updates may still work depending on RLS
+      }
+      setIsAuthorized(true);
+      try {
+        const dbRows = await fetchAllSubmissions();
+        if (!mounted) return;
+        setRows(dbRows);
+        setLoading(false);
+      } catch (e: any) {
+        setLoading(false);
+      }
+
+      // Subscribe to realtime changes
+      try {
+        channel = (supabase as any).channel?.('submissions_changes');
+        channel?.on?.('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'submissions',
+        }, (payload: any) => {
+          const newRow = payload?.new as SubmissionRow | undefined;
+          const oldRow = payload?.old as SubmissionRow | undefined;
+          if (newRow && (!oldRow || newRow.id !== oldRow.id)) {
+            setRows(prev => mergeSubmissions([newRow, ...prev.filter(r => r.id !== newRow.id)]));
+          } else if (oldRow && !newRow) {
+            setRows(prev => prev.filter(r => r.id !== oldRow.id));
+          } else if (newRow && oldRow && newRow.id === oldRow.id) {
+            setRows(prev => prev.map(r => (r.id === newRow.id ? newRow : r)));
+          }
+        });
+        channel?.subscribe?.();
+      } catch {}
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+      try { channel?.unsubscribe?.(); } catch {}
+    };
+  }, []);
+  
+  // (duplicate fetchAllSubmissions removed)
   useEffect(() => {
     let mounted = true;
     let channel: any;
@@ -223,8 +298,8 @@ export default function Admin() {
           .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, async () => {
             const latest = await fetchAllSubmissions();
             if (mounted) setRows(latest);
-          })
-          .subscribe();
+          });
+        channel?.subscribe?.();
       } catch {}
     };
     load();
@@ -244,7 +319,7 @@ export default function Admin() {
   const updateStatus = async (id: string, status: SubmissionRow['status']) => {
     try {
       const token = await getToken();
-      const res = await fetch(apiUrl(`/api/submissions/${id}`), {
+      const res = await fetch(apiUrl(`submissions/${id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -253,33 +328,12 @@ export default function Admin() {
         body: JSON.stringify({ status }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast({ title: 'Update failed', description: json?.error || `HTTP ${res.status}`, variant: 'destructive' });
-        return;
-      }
-      const latest = await fetchAllSubmissions();
-      setRows(latest);
-      const sub = (json?.submission || latest.find((r) => r.id === id));
-      if (sub) {
-        sendStatusEmail({
-          id: sub.id,
-          name: sub.name,
-          email: sub.email,
-          mobile: sub.mobile,
-          city: sub.city,
-          businessName: sub.businessName,
-          businessType: sub.businessType,
-          loanAmount: sub.loanAmount,
-          loanPurpose: sub.loanPurpose,
-          tenure: sub.tenure,
-          created_at: sub.created_at,
-          status: status,
-        }, status);
-      }
-      toast({ title: 'Status updated', description: `Submission marked as ${status}.` });
-      await logActivity('admin_update_status', { id, status });
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      const updated = json?.submission as SubmissionRow;
+      setRows(prev => prev.map(r => (r.id === id ? updated : r)));
+      toast({ title: 'Status updated', description: `Submission ${id} is now ${status}` });
     } catch (e: any) {
-      toast({ title: 'Update failed', description: e?.message || 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Failed to update status', description: e?.message || 'Unknown error', variant: 'destructive' });
     }
   };
 

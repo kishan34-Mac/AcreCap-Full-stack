@@ -181,17 +181,52 @@ export default function Apply() {
         let createdAt: string | null = null;
         try {
           const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
-          const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || 'https://acrecap-full-stack.onrender.com';
-          const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
-          const res = await fetch(apiUrl('/api/submissions'), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(payload),
-          });
-          const json = await res.json().catch(() => ({}));
+          // Build primary base from env and define fallback to Render; ensure single /api segment
+          const makeApiBase = (raw: string | undefined) => {
+            if (!raw) return null;
+            const noSlash = raw.trim().replace(/\/+$/, '');
+            const base = noSlash.endsWith('/api') ? noSlash : `${noSlash}/api`;
+            return base || null;
+          };
+          const primaryBase = makeApiBase(import.meta.env.VITE_BACKEND_URL as string | undefined);
+          const fallbackBase = makeApiBase('https://acrecap-full-stack.onrender.com');
+          const urlFor = (base: string | null, path: string) => {
+            const p = path.replace(/^\/+/, '');
+            return `${base}/${p}`;
+          };
+
+          // Attempt primary backend first (if defined), otherwise use fallback directly
+          const doPost = async (base: string | null) => {
+            const res = await fetch(urlFor(base!, 'submissions'), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify(payload),
+            });
+            const json = await res.json().catch(() => ({}));
+            return { res, json } as const;
+          };
+
+          let res, json;
+          if (primaryBase) {
+            try {
+              ({ res, json } = await doPost(primaryBase));
+            } catch (networkErr) {
+              // Network failure: try fallback
+              ({ res, json } = await doPost(fallbackBase));
+            }
+            if (!res.ok) {
+              // Some hosts may return 404 not_found if API route unavailable; retry fallback once
+              if (res.status === 404 && fallbackBase && primaryBase !== fallbackBase) {
+                ({ res, json } = await doPost(fallbackBase));
+              }
+            }
+          } else {
+            ({ res, json } = await doPost(fallbackBase));
+          }
+
           if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
           const data = json?.submission;
           createdId = data?.id ?? null;
