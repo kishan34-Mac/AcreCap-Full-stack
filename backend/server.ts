@@ -6,10 +6,13 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import path from "path";
-import fs from "fs";
 
 const app = express();
+
+/** -----------------------
+ * Trust proxy (Render sits behind a proxy)
+ * ---------------------- */
+app.set("trust proxy", 1);
 
 /** -----------------------
  * Health first (no dependencies)
@@ -22,7 +25,7 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
  * ---------------------- */
 const allowedOrigins =
   process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? [
-    "http://localhost:5173", // Vite dev default
+    "http://localhost:5173",
     "http://localhost:8080",
     "http://localhost:8081",
   ];
@@ -30,9 +33,7 @@ const allowedOrigins =
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow server-to-server / curl / postman (no Origin header)
       if (!origin) return cb(null, true);
-
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
@@ -83,14 +84,6 @@ app.use(
 );
 
 /** -----------------------
- * Optional: serve frontend build if exists
- * ---------------------- */
-const distDir = path.join(process.cwd(), "dist");
-if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir, { maxAge: "1h" }));
-}
-
-/** -----------------------
  * Supabase (service role) for backend
  * ---------------------- */
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -99,7 +92,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || proce
 let supabase: SupabaseClient | null = null;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn("⚠️ Supabase env not set. Backend will run in static-only mode.");
+  console.warn("⚠️ Supabase env not set. Backend will run in limited mode.");
 } else {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -284,14 +277,13 @@ async function isAdminRequest(req: express.Request): Promise<boolean> {
   return profile?.role === "admin";
 }
 
-// Public: create submission
 app.post("/api/submissions", async (req, res) => {
   if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
   const parsed = submissionSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
 
-  const userId = (req as any).userId; // can be null if unauthenticated
+  const userId = (req as any).userId;
   const payload = { ...parsed.data, user_id: userId ?? null };
 
   const { data, error } = await supabase.from("submissions").insert(payload).select("*").maybeSingle();
@@ -300,7 +292,6 @@ app.post("/api/submissions", async (req, res) => {
   return res.json({ submission: data });
 });
 
-// Admin: list submissions
 app.get("/api/submissions", async (req, res) => {
   if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
@@ -313,7 +304,6 @@ app.get("/api/submissions", async (req, res) => {
   return res.json({ submissions: data || [] });
 });
 
-// Admin: update submission status
 app.patch("/api/submissions/:id", async (req, res) => {
   if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
 
@@ -341,12 +331,10 @@ app.patch("/api/submissions/:id", async (req, res) => {
 app.use("/api", (_req, res) => res.status(404).json({ error: "not_found" }));
 
 /** -----------------------
- * SPA fallback if dist exists
+ * Root route (optional)
  * ---------------------- */
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) return next();
-  if (!fs.existsSync(path.join(distDir, "index.html"))) return res.status(404).send("Not Found");
-  return res.sendFile(path.join(distDir, "index.html"));
+app.get("/", (_req, res) => {
+  res.status(200).send("AcreCap backend running. Use /healthz and /api/*");
 });
 
 /** -----------------------
