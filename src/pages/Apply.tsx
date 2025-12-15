@@ -180,16 +180,24 @@ export default function Apply() {
         let createdId: string | null = null;
         let createdAt: string | null = null;
         try {
-          const { data, error } = await (supabase as any)
-            .from('submissions')
-            .insert(payload)
-            .select('id, created_at')
-            .single();
-          if (error) throw error;
+          const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
+          const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || '';
+          const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
+          const res = await fetch(apiUrl('/api/submissions'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+          const data = json?.submission;
           createdId = data?.id ?? null;
-          createdAt = (data as any)?.created_at ?? null;
+          createdAt = data?.created_at ?? null;
         } catch (insertErr: any) {
-          // Fallback: keep locally when remote table is missing
+          // Fallback: keep locally when backend/api unreachable
           const localId = `local_${Date.now()}`;
           createdId = localId;
           createdAt = new Date().toISOString();

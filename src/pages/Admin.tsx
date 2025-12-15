@@ -42,6 +42,17 @@ interface SubmissionRow {
 
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
 
+const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || '';
+const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
+const getToken = async (): Promise<string | null> => {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return sessionData.session?.access_token ?? (sessionData.session as any)?.access_token ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export default function Admin() {
   const { toast } = useToast();
   const [rows, setRows] = useState<SubmissionRow[]>([]);
@@ -181,22 +192,34 @@ export default function Admin() {
   
   // Helper: fetch all submissions from DB using pagination to avoid default limits
   const fetchAllSubmissions = async (): Promise<SubmissionRow[]> => {
-    const pageSize = 1000;
-    let all: SubmissionRow[] = [];
-    for (let page = 0; page < 100; page++) { // safety cap
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      const { data, error } = await (supabase as any)
-        .from('submissions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      if (error) throw error;
-      const batch = (data || []) as SubmissionRow[];
-      all = all.concat(batch);
-      if (batch.length < pageSize) break;
+    try {
+      const token = await getToken();
+      const res = await fetch(apiUrl('/api/submissions'), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      const rows = (json?.submissions || []) as SubmissionRow[];
+      return rows;
+    } catch (e) {
+      // Fallback to Supabase client if backend not reachable
+      const pageSize = 1000;
+      let all: SubmissionRow[] = [];
+      for (let page = 0; page < 100; page++) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await (supabase as any)
+          .from('submissions')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (error) throw error;
+        const batch = (data || []) as SubmissionRow[];
+        all = all.concat(batch);
+        if (batch.length < pageSize) break;
+      }
+      return all;
     }
-    return all;
   };
   
   // Helper: merge DB and local lists (prefer DB for same IDs; include local_* always)

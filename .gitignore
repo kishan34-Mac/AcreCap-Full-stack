@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
++dist-backend
 dist-ssr
 *.local
 
@@ -19,6 +20,10 @@ dist-ssr
 .DS_Store
 *.suo
 *.ntvs*
+.env
+.env.local
+.env.production
+
 *.njsproj
 *.sln
 *.sw?

@@ -201,6 +201,112 @@ app.post('/api/users/sync', async (req, res) => {
   }
 });
 
+// Submissions schema and admin helpers
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const submissionSchema = z.object({
+  user_id: z.string().uuid().nullable().optional(),
+  name: z.string().min(1).max(120),
+  mobile: z.string().min(8).max(20),
+  email: z.string().email().max(160),
+  city: z.string().min(1).max(120),
+  businessName: z.string().min(1).max(160),
+  businessType: z.string().min(1).max(160),
+  annualTurnover: z.string().min(1).max(160),
+  yearsInBusiness: z.string().min(1).max(60),
+  loanAmount: z.string().min(1).max(120),
+  loanPurpose: z.string().min(1).max(200),
+  tenure: z.string().min(1).max(60),
+  panNumber: z.string().nullable().optional(),
+  gstNumber: z.string().nullable().optional(),
+  status: z.enum(['pending','approved','rejected']).default('pending'),
+});
+
+async function isAdminRequest(req: express.Request): Promise<boolean> {
+  try {
+    if (!supabase) return false;
+    const auth = req.header('authorization') || req.header('Authorization') || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : null;
+    if (!token) return false;
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) return false;
+    const email = data.user.email?.toLowerCase();
+    if (email && ADMIN_EMAILS.includes(email)) return true;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    return profile?.role === 'admin';
+  } catch {
+    return false;
+  }
+}
+
+// Public: create submission (allows unauthenticated; uses service role)
+app.post('/api/submissions', async (req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
+    const parsed = submissionSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
+
+    const userId = (req as any).userId; // may be null if unauthenticated
+    const payload = { ...parsed.data, user_id: userId ?? null } as any;
+    const { data, error } = await supabase
+      .from('submissions')
+      .insert(payload)
+      .select('*')
+      .maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ submission: data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'server_error' });
+  }
+});
+
+// Admin: list all submissions
+app.get('/api/submissions', async (req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
+    const ok = await isAdminRequest(req);
+    if (!ok) return res.status(403).json({ error: 'forbidden' });
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ submissions: data || [] });
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'server_error' });
+  }
+});
+
+// Admin: update submission status
+const statusSchema = z.object({ status: z.enum(['pending','approved','rejected']) });
+app.patch('/api/submissions/:id', async (req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
+    const ok = await isAdminRequest(req);
+    if (!ok) return res.status(403).json({ error: 'forbidden' });
+    const id = req.params.id;
+    const parsed = statusSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'validation_error', details: parsed.error.flatten() });
+    const { data, error } = await supabase
+      .from('submissions')
+      .update({ status: parsed.data.status })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ submission: data });
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'server_error' });
+  }
+});
+
 // 404 route for API only
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'not_found' });
