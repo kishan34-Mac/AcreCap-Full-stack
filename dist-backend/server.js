@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
+import path from 'path';
 const app = express();
 // Configurable CORS origins via env: ALLOWED_ORIGINS="https://yourdomain.com,https://admin.yourdomain.com"
 const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()).filter(Boolean)) || [
@@ -13,11 +14,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim(
     'http://localhost:8080',
 ];
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin))
-            return callback(null, true);
-        return callback(new Error('Not allowed by CORS'));
-    },
+    origin: true,
     credentials: true,
 }));
 app.use(express.json());
@@ -31,15 +28,20 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use(limiter);
+// Serve built frontend assets from Vite's dist directory
+const distDir = path.join(process.cwd(), 'dist');
+app.use(express.static(distDir, { maxAge: '1h' }));
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+let supabase = null;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-    console.error('Missing Supabase URL or Service Role key');
-    process.exit(1);
+    console.warn('Supabase env not set. Backend will run in static-only mode.');
 }
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-    auth: { persistSession: false },
-});
+else {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
+        auth: { persistSession: false },
+    });
+}
 // Schemas
 const profileUpdateSchema = z.object({
     full_name: z.string().min(1).max(120).optional(),
@@ -52,6 +54,8 @@ const roleUpdateSchema = z.object({
 // Helper: get user id from Authorization: Bearer <token>, with optional dev fallback
 async function getAuthUserId(req) {
     try {
+        if (!supabase)
+            return null;
         const auth = req.header('authorization') || req.header('Authorization') || '';
         const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : null;
         if (token) {
@@ -60,7 +64,6 @@ async function getAuthUserId(req) {
                 return null;
             return data.user?.id ?? null;
         }
-        // Optional dev fallback: allow x-user-id header ONLY when explicitly enabled
         if (process.env.ALLOW_DEV_HEADER === 'true') {
             const devId = req.header('x-user-id');
             if (devId)
@@ -82,6 +85,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // Get my profile
 app.get('/api/users/me', async (req, res) => {
     try {
+        if (!supabase)
+            return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
         const userId = req.userId;
         if (!userId)
             return res.status(401).json({ error: 'unauthorized' });
@@ -101,6 +106,8 @@ app.get('/api/users/me', async (req, res) => {
 // Update my profile
 app.put('/api/users/me', async (req, res) => {
     try {
+        if (!supabase)
+            return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
         const userId = req.userId;
         if (!userId)
             return res.status(401).json({ error: 'unauthorized' });
@@ -124,10 +131,11 @@ app.put('/api/users/me', async (req, res) => {
 // Admin: update role (caller must be admin)
 app.post('/api/users/role', async (req, res) => {
     try {
+        if (!supabase)
+            return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
         const callerId = req.userId;
         if (!callerId)
             return res.status(401).json({ error: 'unauthorized' });
-        // verify caller role
         const { data: caller, error: callerErr } = await supabase
             .from('profiles')
             .select('role')
@@ -157,6 +165,8 @@ app.post('/api/users/role', async (req, res) => {
 // Sync: upsert caller into profiles using auth email
 app.post('/api/users/sync', async (req, res) => {
     try {
+        if (!supabase)
+            return res.status(503).json({ error: 'service_unavailable', message: 'Supabase not configured' });
         const callerId = req.userId;
         if (!callerId)
             return res.status(401).json({ error: 'unauthorized' });
@@ -181,9 +191,15 @@ app.post('/api/users/sync', async (req, res) => {
         return res.status(500).json({ error: e?.message || 'server_error' });
     }
 });
-// 404 route
-app.use((_req, res) => {
+// 404 route for API only
+app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not_found' });
+});
+// SPA fallback for all non-API routes (serves React app)
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api'))
+        return next();
+    res.sendFile(path.join(distDir, 'index.html'));
 });
 // Error handler
 app.use((err, _req, res, _next) => {
