@@ -15,13 +15,17 @@ const app = express();
 app.set("trust proxy", 1);
 
 /** -----------------------
- * Health first (no dependencies)
+ * Health (always plain text)
  * ---------------------- */
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+app.get("/healthz", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).type("text/plain").send("ok");
+});
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 /** -----------------------
- * CORS (strict + supports credentials)
+ * CORS
  * ---------------------- */
 const allowedOrigins =
   process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? [
@@ -33,7 +37,9 @@ const allowedOrigins =
 app.use(
   cors({
     origin: (origin, cb) => {
+      // allow server-to-server / curl / postman (no Origin header)
       if (!origin) return cb(null, true);
+
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
@@ -86,13 +92,13 @@ app.use(
 /** -----------------------
  * Supabase (service role) for backend
  * ---------------------- */
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL; // prefer backend-only env
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
 
 let supabase: SupabaseClient | null = null;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn("⚠️ Supabase env not set. Backend will run in limited mode.");
+  console.warn("⚠️ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. API routes will return 503.");
 } else {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -331,11 +337,9 @@ app.patch("/api/submissions/:id", async (req, res) => {
 app.use("/api", (_req, res) => res.status(404).json({ error: "not_found" }));
 
 /** -----------------------
- * Root route (optional)
+ * Root route (for Render)
  * ---------------------- */
-app.get("/", (_req, res) => {
-  res.status(200).send("AcreCap backend running. Use /healthz and /api/*");
-});
+app.get("/", (_req, res) => res.status(200).type("text/plain").send("AcreCap backend running. Use /healthz and /api/*"));
 
 /** -----------------------
  * Error handler
