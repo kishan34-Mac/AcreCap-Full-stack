@@ -3,12 +3,12 @@ import { Layout } from '@/components/layout/Layout';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+// removed unused Select import
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { sendStatusEmail } from '@/lib/email';
-import { logActivity, syncLocalSubmissionsToDB, backupSnapshot } from '@/lib/sync';
+import { logActivity } from '@/lib/sync';
 import { useQueryClient } from '@tanstack/react-query';
 
 // CSV headers for export
@@ -42,7 +42,7 @@ interface SubmissionRow {
 
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
 
-const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || '';
+const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || 'https://acrecap-full-stack.onrender.com';
 const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
 const getToken = async (): Promise<string | null> => {
   try {
@@ -89,14 +89,6 @@ export default function Admin() {
 
     if (session) {
       try {
-        const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
-        const snapshot = Object.values(store || {}) as any[];
-        await backupSnapshot(snapshot);
-        const syncRes = await syncLocalSubmissionsToDB();
-        await logActivity('logout_sync', { inserted: syncRes.inserted, errors: syncRes.errors });
-      } catch {}
-
-      try {
         const { error } = await supabase.auth.signOut();
         if (error) {
           const msg = error.message || '';
@@ -110,10 +102,6 @@ export default function Admin() {
 
     teardownRealtime();
     clearSupabaseAuthStorage();
-    try {
-      localStorage.removeItem('localSubmissions');
-      // Intentionally keep theme preference
-    } catch {}
     try { queryClient.clear(); } catch {}
 
     if (logoutError) {
@@ -163,31 +151,13 @@ export default function Admin() {
   };
   // Helper: read local submissions as array
   const readLocalSubmissions = (): SubmissionRow[] => {
-    try {
-      const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
-      const localRows: SubmissionRow[] = Object.values(store || {}).map((v: any) => ({
-        id: v.id,
-        created_at: v.created_at,
-        user_id: v.user_id ?? null,
-        name: v.name,
-        mobile: v.mobile,
-        email: v.email,
-        city: v.city,
-        businessName: v.businessName,
-        businessType: v.businessType,
-        annualTurnover: v.annualTurnover,
-        yearsInBusiness: v.yearsInBusiness,
-        loanAmount: v.loanAmount,
-        loanPurpose: v.loanPurpose,
-        tenure: v.tenure,
-        panNumber: v.panNumber ?? null,
-        gstNumber: v.gstNumber ?? null,
-        status: (v.status as SubmissionRow['status']) ?? 'pending',
-      }));
-      return localRows;
-    } catch {
-      return [];
-    }
+    // Local storage fallback removed; always rely on backend/Supabase
+    return [];
+  };
+  
+  // Helper: merge DB and local lists
+  const mergeSubmissions = (dbRows: SubmissionRow[], _localRows: SubmissionRow[]): SubmissionRow[] => {
+    return [...dbRows].sort((a,b) => (a.created_at > b.created_at ? -1 : 1));
   };
   
   // Helper: fetch all submissions from DB using pagination to avoid default limits
@@ -201,36 +171,13 @@ export default function Admin() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       const rows = (json?.submissions || []) as SubmissionRow[];
       return rows;
-    } catch (e) {
-      // Fallback to Supabase client if backend not reachable
-      const pageSize = 1000;
-      let all: SubmissionRow[] = [];
-      for (let page = 0; page < 100; page++) {
-        const from = page * pageSize;
-        const to = from + pageSize - 1;
-        const { data, error } = await (supabase as any)
-          .from('submissions')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        if (error) throw error;
-        const batch = (data || []) as SubmissionRow[];
-        all = all.concat(batch);
-        if (batch.length < pageSize) break;
-      }
-      return all;
+    } catch (e: any) {
+      toast({ title: 'Load failed', description: e?.message || 'Unable to load submissions from backend', variant: 'destructive' });
+      return [];
     }
   };
   
-  // Helper: merge DB and local lists (prefer DB for same IDs; include local_* always)
-  const mergeSubmissions = (dbRows: SubmissionRow[], localRows: SubmissionRow[]): SubmissionRow[] => {
-    const byId = new Map<string, SubmissionRow>();
-    for (const r of dbRows) byId.set(r.id, r);
-    for (const r of localRows) {
-      if (!byId.has(r.id)) byId.set(r.id, r);
-    }
-    return Array.from(byId.values()).sort((a,b) => (a.created_at > b.created_at ? -1 : 1));
-  };
+  // (removed) mergeSubmissions that previously merged local rows
   useEffect(() => {
     let mounted = true;
     let channel: any;
@@ -262,12 +209,10 @@ export default function Admin() {
       try {
         const dbRows = await fetchAllSubmissions();
         if (!mounted) return;
-        const merged = mergeSubmissions(dbRows, readLocalSubmissions());
-        setRows(merged);
+        setRows(dbRows);
       } catch (e: any) {
-        // Network or client error -> fallback to local only
-        setRows(readLocalSubmissions());
-        toast({ title: 'Loaded local data', description: 'Showing locally stored submissions until database is ready.' });
+        setRows([]);
+        toast({ title: 'Load failed', description: e?.message || 'Unable to load submissions from backend', variant: 'destructive' });
       }
       setLoading(false);
 
@@ -277,7 +222,7 @@ export default function Admin() {
           .channel('submissions-admin')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, async () => {
             const latest = await fetchAllSubmissions();
-            if (mounted) setRows(mergeSubmissions(latest, readLocalSubmissions()));
+            if (mounted) setRows(latest);
           })
           .subscribe();
       } catch {}
@@ -297,76 +242,45 @@ export default function Admin() {
   }, [rows, search, statusFilter]);
 
   const updateStatus = async (id: string, status: SubmissionRow['status']) => {
-    if (id.startsWith('local_')) {
-      try {
-        const storeKey = 'localSubmissions';
-        const store = (() => {
-          try { return JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch { return {}; }
-        })();
-        if (store[id]) {
-          store[id].status = status;
-          localStorage.setItem(storeKey, JSON.stringify(store));
-          setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
-          // Fire email notification (best-effort)
-          const sub = store[id];
-          sendStatusEmail({
-            id: sub.id,
-            name: sub.name,
-            email: sub.email,
-            mobile: sub.mobile,
-            city: sub.city,
-            businessName: sub.businessName,
-            businessType: sub.businessType,
-            loanAmount: sub.loanAmount,
-            loanPurpose: sub.loanPurpose,
-            tenure: sub.tenure,
-            created_at: sub.created_at,
-            status: status,
-          }, status);
-          toast({ title: 'Status updated', description: `Local submission marked as ${status}.` });
-        } else {
-          toast({ title: 'Not found', description: 'Local submission could not be found in storage.', variant: 'destructive' });
-        }
-      } catch {
-        toast({ title: 'Update failed', description: 'Unable to update local submission.', variant: 'destructive' });
+    try {
+      const token = await getToken();
+      const res = await fetch(apiUrl(`/api/submissions/${id}`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({ title: 'Update failed', description: json?.error || `HTTP ${res.status}`, variant: 'destructive' });
+        return;
       }
-      return;
+      const latest = await fetchAllSubmissions();
+      setRows(latest);
+      const sub = (json?.submission || latest.find((r) => r.id === id));
+      if (sub) {
+        sendStatusEmail({
+          id: sub.id,
+          name: sub.name,
+          email: sub.email,
+          mobile: sub.mobile,
+          city: sub.city,
+          businessName: sub.businessName,
+          businessType: sub.businessType,
+          loanAmount: sub.loanAmount,
+          loanPurpose: sub.loanPurpose,
+          tenure: sub.tenure,
+          created_at: sub.created_at,
+          status: status,
+        }, status);
+      }
+      toast({ title: 'Status updated', description: `Submission marked as ${status}.` });
+      await logActivity('admin_update_status', { id, status });
+    } catch (e: any) {
+      toast({ title: 'Update failed', description: e?.message || 'Unknown error', variant: 'destructive' });
     }
-    const { error } = await (supabase as any)
-      .from('submissions')
-      .update({ status })
-      .eq('id', id)
-      .select('*');
-    if (error) {
-      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
-      return;
-    }
-    // Re-fetch minimal list to reflect any server-side defaults
-    const { data: refreshed } = await (supabase as any)
-      .from('submissions')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setRows((refreshed || []).map((r: any) => r as SubmissionRow));
-    // Send email for server-backed submission
-    const sub = (refreshed || []).find((r: any) => r.id === id);
-    if (sub) {
-      sendStatusEmail({
-        id: sub.id,
-        name: sub.name,
-        email: sub.email,
-        mobile: sub.mobile,
-        city: sub.city,
-        businessName: sub.businessName,
-        businessType: sub.businessType,
-        loanAmount: sub.loanAmount,
-        loanPurpose: sub.loanPurpose,
-        tenure: sub.tenure,
-        created_at: sub.created_at,
-        status: status,
-      }, status);
-    }
-    toast({ title: 'Status updated', description: `Submission marked as ${status}.` });
-    await logActivity('admin_update_status', { id, status });
   };
 
   if (loading) {
@@ -454,7 +368,7 @@ export default function Admin() {
                       <Button size="sm" variant="accent" className="rounded-full" onClick={() => updateStatus(r.id, 'approved')}>Accept</Button>
                       <Button size="sm" variant="destructive" className="rounded-full" onClick={() => updateStatus(r.id, 'rejected')}>Reject</Button>
                       <Button size="sm" variant="secondary" className="rounded-full" onClick={() => updateStatus(r.id, 'pending')}>Reset</Button>
-                      {r.id.startsWith('local_') && (<span className="text-[11px] text-muted-foreground">Local only</span>)}
+                      {/* removed local-only label */}
                     </td>
                   </tr>
                 ))}

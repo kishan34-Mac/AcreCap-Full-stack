@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { logActivity, syncLocalSubmissionsToDB, backupSnapshot } from '@/lib/sync';
+import { logActivity } from '@/lib/sync';
 import { useQueryClient } from '@tanstack/react-query';
 
 const loanTypes = [{
@@ -129,15 +129,6 @@ export const Navbar = () => {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session) {
-      // Best-effort: persist data before sign-out
-      try {
-        const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
-        const snapshot = Object.values(store || {}) as any[];
-        await backupSnapshot(snapshot);
-        const syncRes = await syncLocalSubmissionsToDB();
-        await logActivity('logout_sync', { inserted: syncRes.inserted, errors: syncRes.errors });
-      } catch {}
-
       // Terminate server session
       try {
         const { error } = await supabase.auth.signOut();
@@ -154,12 +145,6 @@ export const Navbar = () => {
     // Regardless of server result, tear down client state
     teardownRealtime();
     clearSupabaseAuthStorage();
-
-    // Clear sensitive local data
-    try {
-      localStorage.removeItem('localSubmissions');
-      // Do not clear theme to keep user preference intact
-    } catch {}
 
     try { queryClient.clear(); } catch {}
 

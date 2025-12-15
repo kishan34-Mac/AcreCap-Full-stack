@@ -176,12 +176,12 @@ export default function Apply() {
           status: 'pending' as const,
         };
 
-        // Try remote insert first
+        // Remote insert only
         let createdId: string | null = null;
         let createdAt: string | null = null;
         try {
           const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
-          const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || '';
+          const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.replace(/\/$/, '') || 'https://acrecap-full-stack.onrender.com';
           const apiUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
           const res = await fetch(apiUrl('/api/submissions'), {
             method: 'POST',
@@ -196,17 +196,11 @@ export default function Apply() {
           const data = json?.submission;
           createdId = data?.id ?? null;
           createdAt = data?.created_at ?? null;
+          if (!createdId) throw new Error('No submission id returned');
         } catch (insertErr: any) {
-          // Fallback: keep locally when backend/api unreachable
-          const localId = `local_${Date.now()}`;
-          createdId = localId;
-          createdAt = new Date().toISOString();
-          const storeKey = 'localSubmissions';
-          const existing = (() => {
-            try { return JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch { return {}; }
-          })();
-          existing[localId] = { id: localId, created_at: createdAt, ...payload };
-          localStorage.setItem(storeKey, JSON.stringify(existing));
+          toast({ title: 'Submission failed', description: insertErr?.message || 'Unable to submit your application right now. Please try again.', variant: 'destructive' });
+          setSubmitting(false);
+          return;
         }
 
         // Optional: Google Sheets webhook sync
@@ -243,16 +237,12 @@ export default function Apply() {
           created_at: submissionForExport.created_at,
           status: 'pending',
         }, 'pending');
-
-        await logActivity('apply_submit', { id: submissionForExport.id, created_at: submissionForExport.created_at });
-        // WhatsApp forwarding and chat removed
-
-        toast({ title: 'Application submitted', description: 'We have received your details. Redirecting…' });
-        navigate(`/thank-you?id=${createdId}`);
-      } catch (e: any) {
-        toast({ title: 'Submission failed', description: e.message ?? 'Unexpected error', variant: 'destructive' });
-      } finally {
+        await logActivity('apply_submit', { id: submissionForExport.id });
         setSubmitting(false);
+        navigate(`/thank-you?id=${submissionForExport.id}`);
+      } catch (e: any) {
+        setSubmitting(false);
+        toast({ title: 'Submission failed', description: e?.message || 'Unknown error', variant: 'destructive' });
       }
     }
   };

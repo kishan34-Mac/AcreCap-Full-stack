@@ -41,11 +41,8 @@ export default function ThankYou() {
         .maybeSingle();
       if (!mounted) return;
       if (error || !data) {
-        try {
-          const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
-          const local = store[submissionId];
-          if (local) setSubmission(local as SubmissionRow);
-        } catch {}
+        // Not found or error
+        setSubmission(null);
       } else {
         setSubmission(data as SubmissionRow);
       }

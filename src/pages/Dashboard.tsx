@@ -72,15 +72,6 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
     let channel: any;
-    const loadLocalFallback = (uid: string) => {
-      try {
-        const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
-        const arr: SubmissionRow[] = Object.values(store || {}) as any;
-        const mine = arr.filter(r => r.user_id === uid);
-        mine.sort((a, b) => (new Date(b.created_at).getTime()) - (new Date(a.created_at).getTime()));
-        if (mounted) setRows(mine);
-      } catch {}
-    };
     const load = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const uid = sessionData.session?.user?.id || null;
@@ -99,12 +90,7 @@ export default function Dashboard() {
       if (!mounted) return;
       if (error) {
         const msg = error.message || '';
-        // Fallback when schema cache is not yet updated
-        if (msg.includes('schema cache') || msg.includes("Could not find the table 'public.submissions'")) {
-          loadLocalFallback(uid);
-        } else {
-          toast({ title: 'Error', description: msg, variant: 'destructive' });
-        }
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
       } else {
         setRows((data || []) as SubmissionRow[]);
       }
