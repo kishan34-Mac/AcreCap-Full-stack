@@ -40,7 +40,14 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS }}
           VITE_WHATSAPP_NUMBER: ${{ secrets.VITE_WHATSAPP_NUMBER }}
+          # Optional webhook integrations
+          VITE_GOOGLE_SHEETS_WEBHOOK_URL: ${{ secrets.VITE_GOOGLE_SHEETS_WEBHOOK_URL }}
+          VITE_ADMIN_NOTIFICATION_WEBHOOK_URL: ${{ secrets.VITE_ADMIN_NOTIFICATION_WEBHOOK_URL }}
+          VITE_STATUS_EMAIL_WEBHOOK_URL: ${{ secrets.VITE_STATUS_EMAIL_WEBHOOK_URL }}
         run: npm run build
+
+      - name: Add SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
