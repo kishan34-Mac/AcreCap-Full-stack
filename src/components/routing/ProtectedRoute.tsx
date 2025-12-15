@@ -41,17 +41,24 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Checking authentication…</div>;
   }
 
-  if (!isAuthenticated) {
-    // Show dashboard when not authenticated, as requested
+  // If route requires admin and user is not authenticated, redirect to admin login
+  if (requireAdmin && !isAuthenticated) {
+    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+  }
+
+  // For non-admin-required routes, keep existing behavior when unauthenticated
+  if (!requireAdmin && !isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
-  // Admin-only guard
+
+  // Admin-only guard: redirect non-admins to admin login
   if (requireAdmin) {
     const email = userEmail;
     const isAdmin = !!email && ADMIN_EMAILS.includes(email);
     if (!isAdmin) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/admin/login" replace state={{ from: location }} />;
     }
   }
+
   return <>{children}</>;
 };

@@ -16,8 +16,8 @@ import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import ThankYou from "./pages/ThankYou";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
-// import Profile from "./pages/Profile";
 import AdminUsers from "./pages/AdminUsers";
+import AdminLogin from "./pages/AdminLogin";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +34,7 @@ const App = () => (
             <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             {/* Removed Profile route */}
             {/* <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> */}
             <Route path="/about" element={<About />} />

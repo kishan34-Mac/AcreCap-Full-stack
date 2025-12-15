@@ -44,7 +44,9 @@ const Auth = () => {
   })();
   const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
   const defaultDestinationFor = (email?: string | null) => {
-    return '/';
+    const normalized = email?.toLowerCase() || null;
+    const isAdmin = !!normalized && ADMIN_EMAILS.includes(normalized);
+    return isAdmin ? '/admin' : '/';
   };
 
   useEffect(() => {
@@ -52,6 +54,10 @@ const Auth = () => {
       if (session?.user) {
         const dest = redirectParam || defaultDestinationFor(session.user.email);
         navigate(dest);
+      }
+      // Redirect to home on sign-out as well
+      if (event === 'SIGNED_OUT' || (!session?.user && event === 'USER_UPDATED')) {
+        navigate('/');
       }
     });
 
@@ -285,7 +291,9 @@ const Auth = () => {
       setOtpSent(false);
       setOtpStage('none');
       setOtpCode('');
-      navigate(redirectParam || '/');
+      const { data: { session: phoneSession } } = await supabase.auth.getSession();
+      const dest = redirectParam || defaultDestinationFor(phoneSession?.user?.email ?? null);
+      navigate(dest);
     } catch (e: any) {
       toast({ title: 'Verification failed', description: e?.message || 'Unable to verify OTP.', variant: 'destructive' });
     } finally {

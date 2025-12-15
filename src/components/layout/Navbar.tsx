@@ -154,6 +154,13 @@ export const Navbar = () => {
     // Regardless of server result, tear down client state
     teardownRealtime();
     clearSupabaseAuthStorage();
+
+    // Clear sensitive local data
+    try {
+      localStorage.removeItem('localSubmissions');
+      // Do not clear theme to keep user preference intact
+    } catch {}
+
     try { queryClient.clear(); } catch {}
 
     // Force UI to show dashboard for logged-out users
@@ -162,13 +169,13 @@ export const Navbar = () => {
 
     if (logoutError) {
       toast({ title: 'Logout failed', description: logoutError, variant: 'destructive' });
-      // Still navigate to dashboard to satisfy requirement
-      navigate('/dashboard');
+      // Still navigate to home to satisfy requirement
+      navigate('/');
       return;
     }
 
     toast({ title: 'Logged out', description: 'You have been logged out.' });
-    navigate('/dashboard');
+    navigate('/');
   };
 
   return (
@@ -224,18 +231,23 @@ export const Navbar = () => {
                 {/* Admin link visible only to authenticated admins */}
                 {isAuthenticated && isAdmin && (
                   <>
+                    {/* Remove Admin Users link; keep only Admin */}
                     <Link to="/admin" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
                       Admin
                     </Link>
-                    <Link to="/admin/users" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
-                      Admin Users
-                    </Link>
+                    {/* Removed Admin Users */}
                   </>
                 )}
                 {/* Dashboard visible only to authenticated non-admin users */}
                 {isAuthenticated && !isAdmin && (
                   <Link to="/dashboard" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
                     Dashboard
+                  </Link>
+                )}
+                {/* Show Admin login link when not authenticated */}
+                {!isAuthenticated && (
+                  <Link to="/admin/login" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
+                    Admin
                   </Link>
                 )}
                 {/* Removed Profile from navbar */}
@@ -250,20 +262,23 @@ export const Navbar = () => {
                 <Button variant="ghost" size="icon" className="rounded-xl" onClick={toggleTheme} aria-label="Toggle theme">
                   {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </Button>
-                {/* If admin is logged in, show admin username */}
                 {isAdmin && adminUsername && (
-                  <span className="hidden md:inline text-sm text-muted-foreground">Admin: <span className="font-semibold text-foreground">{adminUsername}</span></span>
+                  // Admin label removed for clean look
+                  null
                 )}
-                {/* Auth buttons */}
                 {isAuthenticated ? (
-                  <button onClick={handleLogout} className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
+                  <button onClick={handleLogout} className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors" aria-label="Logout">
                     Logout
                   </button>
                 ) : (
-                  <Link to="/auth" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
+                  <Link to="/auth" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors" aria-label="Login">
                     Login
                   </Link>
                 )}
+                {/* Removed Profile from navbar */}
+                {/* <Link to="/profile" className="px-4 py-2 text-sm font-bold text-foreground hover:text-primary transition-colors">Profile</Link> */}
+                {/* Auth buttons removed here to avoid duplicate Login/Logout; right-side actions handle auth buttons */}
+                {/* Auth buttons removed here to avoid duplicate Login/Logout; right-side actions handle auth buttons */}
               </div>
 
                 <Button variant="accent" className="hidden md:flex" asChild>
@@ -318,9 +333,7 @@ export const Navbar = () => {
                           <Link to="/admin" className="px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-secondary rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                             Admin
                           </Link>
-                          <Link to="/admin/users" className="px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-secondary rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                            Admin Users
-                          </Link>
+                          {/* Removed Admin Users */}
                         </>
                       )}
                       {/* Non-admin users see Dashboard */}
@@ -336,9 +349,14 @@ export const Navbar = () => {
                       </button>
                     </>
                   ) : (
-                  <Link to="/auth" className="px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-secondary rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                    Login
-                  </Link>
+                  <>
+                    <Link to="/admin/login" className="px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-secondary rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                      Admin
+                    </Link>
+                    <Link to="/auth" className="px-4 py-3 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-secondary rounded-xl transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                      Login
+                    </Link>
+                  </>
                   )}
 
                   <div className="flex gap-2 px-4 pt-2">

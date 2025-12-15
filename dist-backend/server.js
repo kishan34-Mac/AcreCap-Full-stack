@@ -19,7 +19,27 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan('tiny'));
-app.use(helmet());
+// Configure Helmet with CSP that allows Supabase auth endpoints
+const rawSupabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseCspOrigins = rawSupabaseUrl ? [new URL(rawSupabaseUrl).origin] : ["https://*.supabase.co"];
+app.use(helmet({
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            "default-src": ["'self'"],
+            "base-uri": ["'self'"],
+            "img-src": ["'self'", "data:", "https:"],
+            "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            "script-src": ["'self'", "'unsafe-inline'"],
+            "connect-src": ["'self'", "https:", "wss:", ...supabaseCspOrigins, "https://*.supabase.co"],
+            "frame-src": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+            "form-action": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+        },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 // Basic rate limiting
 const limiter = rateLimit({
     windowMs: 60 * 1000,

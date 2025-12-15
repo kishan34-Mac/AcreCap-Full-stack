@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { sendStatusEmail } from '@/lib/email';
-import { logActivity } from '@/lib/sync';
+import { logActivity, syncLocalSubmissionsToDB, backupSnapshot } from '@/lib/sync';
+import { useQueryClient } from '@tanstack/react-query';
 
 // CSV headers for export
 const CSV_HEADERS = ['ID','Created At','Status','Name','Mobile','Email','City','Business Name','Business Type','Annual Turnover','Years In Business','Loan Amount','Loan Purpose','Tenure','PAN','GST','User ID'];
@@ -49,7 +50,69 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [selected, setSelected] = useState<SubmissionRow | null>(null);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
+  const clearSupabaseAuthStorage = () => {
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || '';
+        if (k.startsWith('sb-') || k.includes('supabase')) keys.push(k);
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+  };
+
+  const teardownRealtime = () => {
+    try {
+      const channels = (supabase as any).getChannels?.() || [];
+      channels.forEach((ch: any) => (supabase as any).removeChannel?.(ch));
+      (supabase as any).removeAllChannels?.();
+    } catch {}
+  };
+
+  const handleLogout = async () => {
+    let logoutError: string | null = null;
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session) {
+      try {
+        const store = JSON.parse(localStorage.getItem('localSubmissions') || '{}');
+        const snapshot = Object.values(store || {}) as any[];
+        await backupSnapshot(snapshot);
+        const syncRes = await syncLocalSubmissionsToDB();
+        await logActivity('logout_sync', { inserted: syncRes.inserted, errors: syncRes.errors });
+      } catch {}
+
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          const msg = error.message || '';
+          const isNoSession = /Auth session missing|No active session|No current session/i.test(msg);
+          if (!isNoSession) logoutError = msg;
+        }
+      } catch (e: any) {
+        logoutError = typeof e?.message === 'string' ? e.message : null;
+      }
+    }
+
+    teardownRealtime();
+    clearSupabaseAuthStorage();
+    try {
+      localStorage.removeItem('localSubmissions');
+      // Intentionally keep theme preference
+    } catch {}
+    try { queryClient.clear(); } catch {}
+
+    if (logoutError) {
+      toast({ title: 'Logout failed', description: logoutError, variant: 'destructive' });
+      navigate('/');
+      return;
+    }
+    toast({ title: 'Logged out', description: 'You have been logged out.' });
+    navigate('/');
+  };
   // Export all rows to CSV and trigger download
   const exportCsv = () => {
     try {
@@ -316,7 +379,10 @@ export default function Admin() {
         <div className="container-custom">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Admin Panel</h1>
-            <Button variant="accent" onClick={exportCsv}>Export Data</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={handleLogout}>Logout</Button>
+              <Button variant="accent" onClick={exportCsv}>Export Data</Button>
+            </div>
           </div>
           <div className="glass-card p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={e => setSearch(e.target.value)} />
