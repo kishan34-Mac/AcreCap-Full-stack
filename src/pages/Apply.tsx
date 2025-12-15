@@ -233,9 +233,22 @@ export default function Apply() {
           createdAt = data?.created_at ?? null;
           if (!createdId) throw new Error('No submission id returned');
         } catch (insertErr: any) {
-          toast({ title: 'Submission failed', description: insertErr?.message || 'Unable to submit your application right now. Please try again.', variant: 'destructive' });
-          setSubmitting(false);
-          return;
+          // Fallback: insert directly into Supabase if backend API is unavailable
+          try {
+            const { data, error } = await (supabase as any)
+              .from('submissions')
+              .insert(payload)
+              .select('*')
+              .maybeSingle();
+            if (error) throw new Error(error.message || 'Supabase insert failed');
+            createdId = data?.id ?? null;
+            createdAt = data?.created_at ?? null;
+            if (!createdId) throw new Error('No submission id returned');
+          } catch (supErr: any) {
+            toast({ title: 'Submission failed', description: supErr?.message || (insertErr?.message || 'Unable to submit your application right now. Please try again.'), variant: 'destructive' });
+            setSubmitting(false);
+            return;
+          }
         }
 
         // Optional: Google Sheets webhook sync

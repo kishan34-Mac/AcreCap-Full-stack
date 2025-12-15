@@ -178,9 +178,21 @@ export default function Admin() {
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
       const dbRows: SubmissionRow[] = (json?.submissions || []) as SubmissionRow[];
       return mergeSubmissions(dbRows);
-    } catch (e: any) {
-      toast({ title: 'Failed to load submissions', description: e?.message || 'Unknown error', variant: 'destructive' });
-      return [];
+    } catch (backendErr: any) {
+      // Fallback: try Supabase directly (requires RLS policy granting admins access)
+      try {
+        const { data, error } = await (supabase as any)
+          .from('submissions')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        const dbRows: SubmissionRow[] = (data || []) as SubmissionRow[];
+        return mergeSubmissions(dbRows);
+      } catch (supabaseErr: any) {
+        // If both fail, surface the backend error
+        toast({ title: 'Failed to load submissions', description: backendErr?.message || supabaseErr?.message || 'Unknown error', variant: 'destructive' });
+        return [];
+      }
     }
   };
 
