@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.backend.json",
-    "build:dev": "vite build --mode development && tsc -p tsconfig.backend.json",
+    "build": "vite build",
+    "preview": "vite preview --host --port 4173",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "start": "node dist-backend/server.js",
+
     "backend:dev": "tsx backend/server.ts",
     "backend:build": "tsc -p tsconfig.backend.json",
-    "backend:start": "node dist-backend/server.js"
+    "backend:start": "node dist-backend/server.js",
+
+    "build:all": "vite build && tsc -p tsconfig.backend.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
