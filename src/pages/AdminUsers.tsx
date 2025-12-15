@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Centralized API base to target production backend
+const API_BASE_RAW = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim() || "https://acrecap-full-stack.onrender.com";
+const API_BASE_NO_SLASH = API_BASE_RAW.replace(/\/+$/, "");
+const API_BASE = API_BASE_NO_SLASH.endsWith("/api") ? API_BASE_NO_SLASH : `${API_BASE_NO_SLASH}/api`;
+const apiUrl = (path: string) => {
+  const p = path.replace(/^\/+/, "");
+  return `${API_BASE}/${p}`;
+};
+
 interface ProfileRow {
   id: string;
   email: string | null;
@@ -26,7 +35,7 @@ export default function AdminUsers() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
         if (!token) throw new Error("not_authenticated");
-        const res = await fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(apiUrl("users/me"), { headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json();
         const me = json?.profile as ProfileRow | null;
         if (!me || me.role !== "admin") {
@@ -66,7 +75,7 @@ export default function AdminUsers() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
       if (!token) throw new Error("not_authenticated");
-      const res = await fetch("/api/users/role", {
+      const res = await fetch(apiUrl("users/role"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

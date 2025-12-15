@@ -9,6 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/sync';
 import { useQueryClient } from '@tanstack/react-query';
 
+// Centralized API base to target production backend
+const API_BASE_RAW = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim() || 'https://acrecap-full-stack.onrender.com';
+const API_BASE_NO_SLASH = API_BASE_RAW.replace(/\/+$/, '');
+const API_BASE = API_BASE_NO_SLASH.endsWith('/api') ? API_BASE_NO_SLASH : `${API_BASE_NO_SLASH}/api`;
+const apiUrl = (path: string) => {
+  const p = path.replace(/^\/+/, '');
+  return `${API_BASE}/${p}`;
+};
 const loanTypes = [{
   name: 'Business Loan',
   href: '/loans/business'
@@ -69,7 +77,7 @@ export const Navbar = () => {
     const syncProfile = async (token?: string | null) => {
       try {
         if (!token) return;
-        await fetch('/api/users/sync', {
+        await fetch(apiUrl('users/sync'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
