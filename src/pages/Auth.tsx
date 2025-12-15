@@ -44,9 +44,9 @@ const Auth = () => {
   })();
   const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)?.split(',').map(e => e.trim().toLowerCase()).filter(Boolean) || [];
   const defaultDestinationFor = (email?: string | null) => {
-    const normalized = email?.toLowerCase() || null;
-    const isAdmin = !!normalized && ADMIN_EMAILS.includes(normalized);
-    return isAdmin ? '/admin' : '/';
+    // Redirect all users to Home by default after login/signup.
+    // If a redirect param is present, it will be honored by existing calls using redirectParam || defaultDestinationFor(...).
+    return '/';
   };
 
   useEffect(() => {
