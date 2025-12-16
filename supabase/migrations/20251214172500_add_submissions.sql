@@ -10,15 +10,15 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   mobile text NOT NULL,
   email text NOT NULL,
   city text NOT NULL,
-  businessName text NOT NULL,
-  businessType text NOT NULL,
-  annualTurnover text NOT NULL,
-  yearsInBusiness text NOT NULL,
-  loanAmount text NOT NULL,
-  loanPurpose text NOT NULL,
+  business_name text NOT NULL,
+  business_type text NOT NULL,
+  annual_turnover text NOT NULL,
+  years_in_business text NOT NULL,
+  loan_amount text NOT NULL,
+  loan_purpose text NOT NULL,
   tenure text NOT NULL,
-  panNumber text NULL,
-  gstNumber text NULL,
+  pan_number text NULL,
+  gst_number text NULL,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected'))
 );
 

@@ -1,25 +1,32 @@
-import { useState } from 'react';
-import { Layout } from '@/components/layout/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowRight, ArrowLeft, Check, Phone, Building2, User, Banknote, FileText } from 'lucide-react';
+import { useState } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Phone,
+  Building2,
+  User,
+  Banknote,
+  FileText,
+} from "lucide-react";
 
 const steps = [
-  { id: 1, title: 'Basic Details', icon: User },
-  { id: 2, title: 'Business Info', icon: Building2 },
-  { id: 3, title: 'Loan Details', icon: Banknote },
-  { id: 4, title: 'Documents', icon: FileText },
+  { id: 1, title: "Basic Details", icon: User },
+  { id: 2, title: "Business Info", icon: Building2 },
+  { id: 3, title: "Loan Details", icon: Banknote },
+  { id: 4, title: "Documents", icon: FileText },
 ];
 
-import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, Link } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { sendStatusEmail } from '@/lib/email';
-import { logActivity } from '@/lib/sync';
-
-
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate, Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { sendStatusEmail } from "@/lib/email";
+import { logActivity } from "@/lib/sync";
 
 // Helpers to validate optional PAN/GST without blocking submission
 const isValidPAN = (v: string | null | undefined) => {
@@ -35,19 +42,19 @@ export default function Apply() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    mobile: '',
-    email: '',
-    city: '',
-    businessName: '',
-    businessType: '',
-    annualTurnover: '',
-    yearsInBusiness: '',
-    loanAmount: '',
-    loanPurpose: '',
-    tenure: '',
-    panNumber: '',
-    gstNumber: '',
+    name: "",
+    mobile: "",
+    email: "",
+    city: "",
+    businessName: "",
+    businessType: "",
+    annualTurnover: "",
+    yearsInBusiness: "",
+    loanAmount: "",
+    loanPurpose: "",
+    tenure: "",
+    panNumber: "",
+    gstNumber: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -55,54 +62,80 @@ export default function Apply() {
   const { toast } = useToast();
 
   const Step1Schema = z.object({
-    name: z.string().min(2, 'Name is required'),
-    mobile: z.string().regex(/^\+?\d{10,15}$/i, 'Valid mobile number is required'),
-    email: z.string().email('Valid email is required'),
-    city: z.string().min(2, 'City is required'),
+    name: z.string().min(2, "Name is required"),
+    mobile: z
+      .string()
+      .regex(/^\+?\d{10,15}$/i, "Valid mobile number is required"),
+    email: z.string().email("Valid email is required"),
+    city: z.string().min(2, "City is required"),
   });
   const Step2Schema = z.object({
-    businessName: z.string().min(2, 'Business name is required'),
-    businessType: z.string().min(2, 'Business type is required'),
-    annualTurnover: z.string().min(1, 'Annual turnover is required'),
-    yearsInBusiness: z.string().min(1, 'Years in business is required'),
+    businessName: z.string().min(2, "Business name is required"),
+    businessType: z.string().min(2, "Business type is required"),
+    annualTurnover: z.string().min(1, "Annual turnover is required"),
+    yearsInBusiness: z.string().min(1, "Years in business is required"),
   });
   const Step3Schema = z.object({
-    loanAmount: z.string().min(1, 'Loan amount is required'),
-    tenure: z.string().min(1, 'Tenure is required'),
-    loanPurpose: z.string().min(2, 'Loan purpose is required'),
+    loanAmount: z.string().min(1, "Loan amount is required"),
+    tenure: z.string().min(1, "Tenure is required"),
+    loanPurpose: z.string().min(2, "Loan purpose is required"),
   });
   const Step4Schema = z.object({
-    panNumber: z.string().optional().refine((v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(v), {
-      message: 'Invalid PAN format',
-    }),
-    gstNumber: z.string().optional().refine((v) => !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i.test(v), {
-      message: 'Invalid GST format',
-    }),
+    panNumber: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(v), {
+        message: "Invalid PAN format",
+      }),
+    gstNumber: z
+      .string()
+      .optional()
+      .refine(
+        (v) =>
+          !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i.test(v),
+        {
+          message: "Invalid GST format",
+        }
+      ),
   });
 
   const validateField = (name: string, value: string) => {
     try {
       const obj: any = { [name]: value };
       let schema: z.ZodSchema<any> | null = null;
-      if (['name','mobile','email','city'].includes(name)) schema = Step1Schema.pick({ [name]: true } as any);
-      else if (['businessName','businessType','annualTurnover','yearsInBusiness'].includes(name)) schema = Step2Schema.pick({ [name]: true } as any);
-      else if (['loanAmount','tenure','loanPurpose'].includes(name)) schema = Step3Schema.pick({ [name]: true } as any);
-      else if (['panNumber','gstNumber'].includes(name)) schema = Step4Schema.pick({ [name]: true } as any);
+      if (["name", "mobile", "email", "city"].includes(name))
+        schema = Step1Schema.pick({ [name]: true } as any);
+      else if (
+        [
+          "businessName",
+          "businessType",
+          "annualTurnover",
+          "yearsInBusiness",
+        ].includes(name)
+      )
+        schema = Step2Schema.pick({ [name]: true } as any);
+      else if (["loanAmount", "tenure", "loanPurpose"].includes(name))
+        schema = Step3Schema.pick({ [name]: true } as any);
+      else if (["panNumber", "gstNumber"].includes(name))
+        schema = Step4Schema.pick({ [name]: true } as any);
       if (!schema) return;
       schema.parse(obj);
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     } catch (e) {
       const err = e as z.ZodError;
-      const msg = err.issues[0]?.message || 'Invalid value';
+      const msg = err.issues[0]?.message || "Invalid value";
       setErrors((prev) => ({ ...prev, [name]: msg }));
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    const normalizedValue = (name === 'panNumber' || name === 'gstNumber')
-      ? value.toUpperCase().replace(/\s+/g, '')
-      : value;
+    const normalizedValue =
+      name === "panNumber" || name === "gstNumber"
+        ? value.toUpperCase().replace(/\s+/g, "")
+        : value;
     setFormData({ ...formData, [name]: normalizedValue });
     validateField(name, normalizedValue);
   };
@@ -138,9 +171,13 @@ export default function Apply() {
       const firstInvalid = Object.keys(fieldErrors)[0];
       if (firstInvalid) {
         const el = document.getElementById(firstInvalid);
-        if (el && 'focus' in el) (el as HTMLElement).focus();
+        if (el && "focus" in el) (el as HTMLElement).focus();
       }
-      toast({ title: 'Please fix the highlighted fields', description: 'Some required information is missing or invalid.', variant: 'destructive' });
+      toast({
+        title: "Please fix the highlighted fields",
+        description: "Some required information is missing or invalid.",
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -156,51 +193,61 @@ export default function Apply() {
         setSubmitting(true);
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData.session?.user?.id || null;
-        const sanitizedPan = isValidPAN(formData.panNumber) ? formData.panNumber : null;
-        const sanitizedGst = isValidGSTIN(formData.gstNumber) ? formData.gstNumber : null;
+        const sanitizedPan = isValidPAN(formData.panNumber)
+          ? formData.panNumber
+          : null;
+        const sanitizedGst = isValidGSTIN(formData.gstNumber)
+          ? formData.gstNumber
+          : null;
         const payload = {
           user_id: userId,
           name: formData.name,
           mobile: formData.mobile,
           email: formData.email,
           city: formData.city,
-          businessName: formData.businessName,
-          businessType: formData.businessType,
-          annualTurnover: formData.annualTurnover,
-          yearsInBusiness: formData.yearsInBusiness,
-          loanAmount: formData.loanAmount,
-          loanPurpose: formData.loanPurpose,
+          business_name: formData.businessName,
+          business_type: formData.businessType,
+          annual_turnover: formData.annualTurnover,
+          years_in_business: formData.yearsInBusiness,
+          loan_amount: formData.loanAmount,
+          loan_purpose: formData.loanPurpose,
           tenure: formData.tenure,
-          panNumber: sanitizedPan,
-          gstNumber: sanitizedGst,
-          status: 'pending' as const,
+          pan_number: sanitizedPan,
+          gst_number: sanitizedGst,
+          status: "pending" as const,
         };
 
         // Remote insert only
         let createdId: string | null = null;
         let createdAt: string | null = null;
         try {
-          const token = sessionData.session?.access_token ?? (sessionData.session as any)?.access_token;
+          const token =
+            sessionData.session?.access_token ??
+            (sessionData.session as any)?.access_token;
           // Build primary base from env and define fallback to Render; ensure single /api segment
           const makeApiBase = (raw: string | undefined) => {
             if (!raw) return null;
-            const noSlash = raw.trim().replace(/\/+$/, '');
-            const base = noSlash.endsWith('/api') ? noSlash : `${noSlash}/api`;
+            const noSlash = raw.trim().replace(/\/+$/, "");
+            const base = noSlash.endsWith("/api") ? noSlash : `${noSlash}/api`;
             return base || null;
           };
-          const primaryBase = makeApiBase(import.meta.env.VITE_BACKEND_URL as string | undefined);
-          const fallbackBase = makeApiBase('https://acrecap-full-stack.onrender.com');
+          const primaryBase = makeApiBase(
+            import.meta.env.VITE_BACKEND_URL as string | undefined
+          );
+          const fallbackBase = makeApiBase(
+            "https://acrecap-full-stack.onrender.com"
+          );
           const urlFor = (base: string | null, path: string) => {
-            const p = path.replace(/^\/+/, '');
+            const p = path.replace(/^\/+/, "");
             return `${base}/${p}`;
           };
 
           // Attempt primary backend first (if defined), otherwise use fallback directly
           const doPost = async (base: string | null) => {
-            const res = await fetch(urlFor(base!, 'submissions'), {
-              method: 'POST',
+            const res = await fetch(urlFor(base!, "submissions"), {
+              method: "POST",
               headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
               body: JSON.stringify(payload),
@@ -219,7 +266,11 @@ export default function Apply() {
             }
             if (!res.ok) {
               // Some hosts may return 404 not_found if API route unavailable; retry fallback once
-              if (res.status === 404 && fallbackBase && primaryBase !== fallbackBase) {
+              if (
+                res.status === 404 &&
+                fallbackBase &&
+                primaryBase !== fallbackBase
+              ) {
                 ({ res, json } = await doPost(fallbackBase));
               }
             }
@@ -231,66 +282,91 @@ export default function Apply() {
           const data = json?.submission;
           createdId = data?.id ?? null;
           createdAt = data?.created_at ?? null;
-          if (!createdId) throw new Error('No submission id returned');
+          if (!createdId) throw new Error("No submission id returned");
         } catch (insertErr: any) {
           // Fallback: insert directly into Supabase if backend API is unavailable
           try {
             const { data, error } = await (supabase as any)
-              .from('submissions')
+              .from("submissions")
               .insert(payload)
-              .select('*')
+              .select("*")
               .maybeSingle();
-            if (error) throw new Error(error.message || 'Supabase insert failed');
+            if (error)
+              throw new Error(error.message || "Supabase insert failed");
             createdId = data?.id ?? null;
             createdAt = data?.created_at ?? null;
-            if (!createdId) throw new Error('No submission id returned');
+            if (!createdId) throw new Error("No submission id returned");
           } catch (supErr: any) {
-            toast({ title: 'Submission failed', description: supErr?.message || (insertErr?.message || 'Unable to submit your application right now. Please try again.'), variant: 'destructive' });
+            toast({
+              title: "Submission failed",
+              description:
+                supErr?.message ||
+                insertErr?.message ||
+                "Unable to submit your application right now. Please try again.",
+              variant: "destructive",
+            });
             setSubmitting(false);
             return;
           }
         }
 
         // Optional: Google Sheets webhook sync
-        const submissionForExport = { id: createdId!, created_at: createdAt!, ...payload };
-        const sheetsWebhook = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL as string | undefined;
+        const submissionForExport = {
+          id: createdId!,
+          created_at: createdAt!,
+          ...payload,
+        };
+        const sheetsWebhook = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL as
+          | string
+          | undefined;
         if (sheetsWebhook) {
           fetch(sheetsWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(submissionForExport),
           }).catch(() => {});
         }
         // Optional: Admin notification webhook
-        const adminWebhook = import.meta.env.VITE_ADMIN_NOTIFICATION_WEBHOOK_URL as string | undefined;
+        const adminWebhook = import.meta.env
+          .VITE_ADMIN_NOTIFICATION_WEBHOOK_URL as string | undefined;
         if (adminWebhook) {
           fetch(adminWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'new_submission', submission: submissionForExport }),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "new_submission",
+              submission: submissionForExport,
+            }),
           }).catch(() => {});
         }
         // Send acknowledgment email (pending status)
-        sendStatusEmail({
-          id: submissionForExport.id,
-          name: submissionForExport.name,
-          email: submissionForExport.email,
-          mobile: submissionForExport.mobile,
-          city: submissionForExport.city,
-          businessName: submissionForExport.businessName,
-          businessType: submissionForExport.businessType,
-          loanAmount: submissionForExport.loanAmount,
-          loanPurpose: submissionForExport.loanPurpose,
-          tenure: submissionForExport.tenure,
-          created_at: submissionForExport.created_at,
-          status: 'pending',
-        }, 'pending');
-        await logActivity('apply_submit', { id: submissionForExport.id });
+        sendStatusEmail(
+          {
+            id: submissionForExport.id,
+            name: submissionForExport.name,
+            email: submissionForExport.email,
+            mobile: submissionForExport.mobile,
+            city: submissionForExport.city,
+            businessName: submissionForExport.business_name,
+            businessType: submissionForExport.business_type,
+            loanAmount: submissionForExport.loan_amount,
+            loanPurpose: submissionForExport.loan_purpose,
+            tenure: submissionForExport.tenure,
+            created_at: submissionForExport.created_at,
+            status: "pending",
+          },
+          "pending"
+        );
+        await logActivity("apply_submit", { id: submissionForExport.id });
         setSubmitting(false);
         navigate(`/thank-you?id=${submissionForExport.id}`);
       } catch (e: any) {
         setSubmitting(false);
-        toast({ title: 'Submission failed', description: e?.message || 'Unknown error', variant: 'destructive' });
+        toast({
+          title: "Submission failed",
+          description: e?.message || "Unknown error",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -300,8 +376,6 @@ export default function Apply() {
       setCurrentStep(currentStep - 1);
     }
   };
-
-
 
   if (isSubmitted) {
     return (
@@ -316,7 +390,8 @@ export default function Apply() {
                 Application Submitted!
               </h1>
               <p className="text-lg text-muted-foreground mb-8 animate-fade-up-delayed">
-                Thank you for your application. Our team will review your details and contact you within 24 hours.
+                Thank you for your application. Our team will review your
+                details and contact you within 24 hours.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up-delayed">
                 <Button variant="outline" size="lg" asChild>
@@ -359,8 +434,8 @@ export default function Apply() {
                     <div
                       className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                         currentStep >= step.id
-                          ? 'bg-primary text-primary-foreground shadow-glow'
-                          : 'bg-secondary text-muted-foreground'
+                          ? "bg-primary text-primary-foreground shadow-glow"
+                          : "bg-secondary text-muted-foreground"
                       }`}
                     >
                       {currentStep > step.id ? (
@@ -371,7 +446,9 @@ export default function Apply() {
                     </div>
                     <span
                       className={`text-xs mt-2 hidden sm:block ${
-                        currentStep >= step.id ? 'text-primary font-medium' : 'text-muted-foreground'
+                        currentStep >= step.id
+                          ? "text-primary font-medium"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {step.title}
@@ -380,7 +457,7 @@ export default function Apply() {
                   {index < steps.length - 1 && (
                     <div
                       className={`w-12 sm:w-24 h-1 mx-2 rounded-full transition-all ${
-                        currentStep > step.id ? 'bg-primary' : 'bg-secondary'
+                        currentStep > step.id ? "bg-primary" : "bg-secondary"
                       }`}
                     />
                   )}
@@ -393,7 +470,9 @@ export default function Apply() {
               {/* Step 1: Basic Details */}
               {currentStep === 1 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h2 className="text-xl font-semibold text-foreground mb-6">Personal Information</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-6">
+                    Personal Information
+                  </h2>
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name *</Label>
@@ -406,7 +485,14 @@ export default function Apply() {
                         aria-invalid={!!errors.name}
                         aria-describedby="error-name"
                       />
-                      {errors.name && <p id="error-name" className="text-sm text-destructive mt-1">{errors.name}</p>}
+                      {errors.name && (
+                        <p
+                          id="error-name"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.name}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mobile">Mobile Number *</Label>
@@ -421,7 +507,14 @@ export default function Apply() {
                         aria-invalid={!!errors.mobile}
                         aria-describedby="error-mobile"
                       />
-                      {errors.mobile && <p id="error-mobile" className="text-sm text-destructive mt-1">{errors.mobile}</p>}
+                      {errors.mobile && (
+                        <p
+                          id="error-mobile"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.mobile}
+                        </p>
+                      )}
                       {/* WhatsApp note removed */}
                     </div>
                     <div className="space-y-2">
@@ -436,7 +529,14 @@ export default function Apply() {
                         aria-invalid={!!errors.email}
                         aria-describedby="error-email"
                       />
-                      {errors.email && <p id="error-email" className="text-sm text-destructive mt-1">{errors.email}</p>}
+                      {errors.email && (
+                        <p
+                          id="error-email"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.email}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="city">City *</Label>
@@ -449,7 +549,14 @@ export default function Apply() {
                         aria-invalid={!!errors.city}
                         aria-describedby="error-city"
                       />
-                      {errors.city && <p id="error-city" className="text-sm text-destructive mt-1">{errors.city}</p>}
+                      {errors.city && (
+                        <p
+                          id="error-city"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.city}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -458,7 +565,9 @@ export default function Apply() {
               {/* Step 2: Business Info */}
               {currentStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h2 className="text-xl font-semibold text-foreground mb-6">Business Information</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-6">
+                    Business Information
+                  </h2>
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="businessName">Business Name *</Label>
@@ -471,7 +580,14 @@ export default function Apply() {
                         aria-invalid={!!errors.businessName}
                         aria-describedby="error-businessName"
                       />
-                      {errors.businessName && <p id="error-businessName" className="text-sm text-destructive mt-1">{errors.businessName}</p>}
+                      {errors.businessName && (
+                        <p
+                          id="error-businessName"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.businessName}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="businessType">Business Type *</Label>
@@ -484,7 +600,14 @@ export default function Apply() {
                         aria-invalid={!!errors.businessType}
                         aria-describedby="error-businessType"
                       />
-                      {errors.businessType && <p id="error-businessType" className="text-sm text-destructive mt-1">{errors.businessType}</p>}
+                      {errors.businessType && (
+                        <p
+                          id="error-businessType"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.businessType}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="annualTurnover">Annual Turnover *</Label>
@@ -498,10 +621,19 @@ export default function Apply() {
                         aria-invalid={!!errors.annualTurnover}
                         aria-describedby="error-annualTurnover"
                       />
-                      {errors.annualTurnover && <p id="error-annualTurnover" className="text-sm text-destructive mt-1">{errors.annualTurnover}</p>}
+                      {errors.annualTurnover && (
+                        <p
+                          id="error-annualTurnover"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.annualTurnover}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="yearsInBusiness">Years in Business *</Label>
+                      <Label htmlFor="yearsInBusiness">
+                        Years in Business *
+                      </Label>
                       <Input
                         id="yearsInBusiness"
                         name="yearsInBusiness"
@@ -512,7 +644,14 @@ export default function Apply() {
                         aria-invalid={!!errors.yearsInBusiness}
                         aria-describedby="error-yearsInBusiness"
                       />
-                      {errors.yearsInBusiness && <p id="error-yearsInBusiness" className="text-sm text-destructive mt-1">{errors.yearsInBusiness}</p>}
+                      {errors.yearsInBusiness && (
+                        <p
+                          id="error-yearsInBusiness"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.yearsInBusiness}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -521,7 +660,9 @@ export default function Apply() {
               {/* Step 3: Loan Details */}
               {currentStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h2 className="text-xl font-semibold text-foreground mb-6">Loan Requirements</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-6">
+                    Loan Requirements
+                  </h2>
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="loanAmount">Loan Amount Required *</Label>
@@ -568,7 +709,9 @@ export default function Apply() {
               {/* Step 4: Documents */}
               {currentStep === 4 && (
                 <div className="space-y-6 animate-fade-in">
-                  <h2 className="text-xl font-semibold text-foreground mb-6">Document Details (Optional)</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-6">
+                    Document Details (Optional)
+                  </h2>
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="panNumber">PAN Number</Label>
@@ -593,11 +736,19 @@ export default function Apply() {
                         aria-invalid={!!errors.gstNumber}
                         aria-describedby="error-gstNumber"
                       />
-                      {errors.gstNumber && <p id="error-gstNumber" className="text-sm text-destructive mt-1">{errors.gstNumber} (optional)</p>}
+                      {errors.gstNumber && (
+                        <p
+                          id="error-gstNumber"
+                          className="text-sm text-destructive mt-1"
+                        >
+                          {errors.gstNumber} (optional)
+                        </p>
+                      )}
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    These details help us process your application faster. You can also provide them later.
+                    These details help us process your application faster. You
+                    can also provide them later.
                   </p>
                 </div>
               )}
@@ -612,8 +763,16 @@ export default function Apply() {
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Previous
                 </Button>
-                <Button variant="accent" onClick={handleNext} disabled={submitting}>
-                  {submitting ? 'Submitting…' : currentStep === 4 ? 'Submit Application' : 'Next Step'}
+                <Button
+                  variant="accent"
+                  onClick={handleNext}
+                  disabled={submitting}
+                >
+                  {submitting
+                    ? "Submitting…"
+                    : currentStep === 4
+                    ? "Submit Application"
+                    : "Next Step"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>

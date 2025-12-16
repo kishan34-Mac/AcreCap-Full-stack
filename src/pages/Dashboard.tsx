@@ -1,43 +1,65 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Layout } from '@/components/layout/Layout';
-import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
-import { logActivity } from '@/lib/sync';
+import { useEffect, useMemo, useState } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { logActivity } from "@/lib/sync";
 
 // CSV headers for dashboard export
 const CSV_HEADERS = [
-  'ID','Created','Name','Mobile','Email','City','Business Name','Business Type','Annual Turnover','Years In Business','Loan Amount','Loan Purpose','Tenure','PAN','GST','Status','User ID'
+  "ID",
+  "Created",
+  "Name",
+  "Mobile",
+  "Email",
+  "City",
+  "Business Name",
+  "Business Type",
+  "Annual Turnover",
+  "Years In Business",
+  "Loan Amount",
+  "Loan Purpose",
+  "Tenure",
+  "PAN",
+  "GST",
+  "Status",
+  "User ID",
 ];
 const escapeCsv = (v: any) => {
-  const s = String(v ?? '');
+  const s = String(v ?? "");
   const needsQuote = /[",\n]/.test(s);
   const escaped = s.replace(/"/g, '""');
   return needsQuote ? `"${escaped}"` : escaped;
 };
 const rowsToCsv = (rows: SubmissionRow[]) => {
-  const header = CSV_HEADERS.map(escapeCsv).join(',');
-  const lines = rows.map(r => [
-    r.id,
-    r.created_at,
-    r.name,
-    r.mobile,
-    r.email,
-    r.city,
-    r.businessName,
-    r.businessType,
-    r.annualTurnover,
-    r.yearsInBusiness,
-    r.loanAmount,
-    r.loanPurpose,
-    r.tenure,
-    r.panNumber ?? '',
-    r.gstNumber ?? '',
-    r.status,
-    r.user_id ?? '',
-  ].map(escapeCsv).join(',')).join('\n');
+  const header = CSV_HEADERS.map(escapeCsv).join(",");
+  const lines = rows
+    .map((r) =>
+      [
+        r.id,
+        r.created_at,
+        r.name,
+        r.mobile,
+        r.email,
+        r.city,
+        r.business_name,
+        r.business_type,
+        r.annual_turnover,
+        r.years_in_business,
+        r.loan_amount,
+        r.loan_purpose,
+        r.tenure,
+        r.panNumber ?? "",
+        r.gstNumber ?? "",
+        r.status,
+        r.user_id ?? "",
+      ]
+        .map(escapeCsv)
+        .join(",")
+    )
+    .join("\n");
   return `${header}\n${lines}`;
 };
 
@@ -49,23 +71,25 @@ interface SubmissionRow {
   mobile: string;
   email: string;
   city: string;
-  businessName: string;
-  businessType: string;
-  annualTurnover: string;
-  yearsInBusiness: string;
-  loanAmount: string;
-  loanPurpose: string;
+  business_name: string;
+  business_type: string;
+  annual_turnover: string;
+  years_in_business: string;
+  loan_amount: string;
+  loan_purpose: string;
   tenure: string;
-  panNumber: string | null;
-  gstNumber: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  pan_number: string | null;
+  gst_number: string | null;
+  status: "pending" | "approved" | "rejected";
 }
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [rows, setRows] = useState<SubmissionRow[]>([]);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all'|'pending'|'approved'|'rejected'>('all');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -77,20 +101,24 @@ export default function Dashboard() {
       const uid = sessionData.session?.user?.id || null;
       setUserId(uid);
       if (!uid) {
-        toast({ title: 'Not signed in', description: 'Please sign in to view your dashboard.', variant: 'destructive' });
+        toast({
+          title: "Not signed in",
+          description: "Please sign in to view your dashboard.",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
-      await logActivity('dashboard_open');
+      await logActivity("dashboard_open");
       const { data, error } = await (supabase as any)
-        .from('submissions')
-        .select('*')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .from("submissions")
+        .select("*")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false });
       if (!mounted) return;
       if (error) {
-        const msg = error.message || '';
-        toast({ title: 'Error', description: msg, variant: 'destructive' });
+        const msg = error.message || "";
+        toast({ title: "Error", description: msg, variant: "destructive" });
       } else {
         setRows((data || []) as SubmissionRow[]);
       }
@@ -99,15 +127,24 @@ export default function Dashboard() {
       // Optional realtime updates for this user's submissions
       try {
         channel = (supabase as any)
-          .channel('submissions-user-' + uid)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions', filter: `user_id=eq.${uid}` }, async () => {
-            const { data: latest } = await (supabase as any)
-              .from('submissions')
-              .select('*')
-              .eq('user_id', uid)
-              .order('created_at', { ascending: false });
-            if (mounted && latest) setRows(latest as SubmissionRow[]);
-          })
+          .channel("submissions-user-" + uid)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "submissions",
+              filter: `user_id=eq.${uid}`,
+            },
+            async () => {
+              const { data: latest } = await (supabase as any)
+                .from("submissions")
+                .select("*")
+                .eq("user_id", uid)
+                .order("created_at", { ascending: false });
+              if (mounted && latest) setRows(latest as SubmissionRow[]);
+            }
+          )
           .subscribe();
       } catch {}
     };
@@ -120,23 +157,23 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter(r => {
-      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    return rows.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!q) return true;
-      const hay = `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.businessName} ${r.loanAmount}`.toLowerCase();
+      const hay =
+        `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.business_name} ${r.loan_amount}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, search, statusFilter]);
 
-  const statusLabel = (s: SubmissionRow['status']) => s === 'approved' ? 'accepted' : s;
-
-
+  const statusLabel = (s: SubmissionRow["status"]) =>
+    s === "approved" ? "accepted" : s;
 
   const handleExportCsv = () => {
     const csv = rowsToCsv(filtered);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `submissions_${new Date().toISOString()}.csv`;
     a.click();
@@ -146,7 +183,13 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout>
-        <div className="section-padding"><div className="container-custom"><div className="animate-pulse text-muted-foreground">Loading...</div></div></div>
+        <div className="section-padding">
+          <div className="container-custom">
+            <div className="animate-pulse text-muted-foreground">
+              Loading...
+            </div>
+          </div>
+        </div>
       </Layout>
     );
   }
@@ -158,14 +201,22 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">My Dashboard</h1>
             <div className="flex gap-2">
-              <Button variant="accent" asChild><Link to="/apply">New Application</Link></Button>
-             
-              <Button variant="outline" onClick={handleExportCsv}>Export CSV</Button>
+              <Button variant="accent" asChild>
+                <Link to="/apply">New Application</Link>
+              </Button>
+
+              <Button variant="outline" onClick={handleExportCsv}>
+                Export CSV
+              </Button>
             </div>
           </div>
 
           <div className="glass-card p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input
+              placeholder="Search by name, email, mobile, city, amount"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             <select
               className="border border-border rounded-md bg-background p-2 text-sm"
               value={statusFilter}
@@ -176,7 +227,15 @@ export default function Dashboard() {
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all'); }}>Reset</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+              }}
+            >
+              Reset
+            </Button>
           </div>
 
           <div className="glass-card p-0 overflow-x-auto">
@@ -191,19 +250,38 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(r => (
+                {filtered.map((r) => (
                   <tr key={r.id} className="border-b border-border/50">
-                    <td className="p-3">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="p-3">
+                      {new Date(r.created_at).toLocaleString()}
+                    </td>
                     <td className="p-3">{r.city}</td>
-                    <td className="p-3">{r.businessName}</td>
+                    <td className="p-3">{r.business_name}</td>
                     <td className="p-3">{r.loanAmount}</td>
                     <td className="p-3">
-                      <span className={`inline-block px-2 py-1 rounded text-xs ${r.status === 'approved' ? 'bg-success/20 text-success' : r.status === 'rejected' ? 'bg-destructive/20 text-destructive' : 'bg-secondary text-muted-foreground'}`}>{statusLabel(r.status)}</span>
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs ${
+                          r.status === "approved"
+                            ? "bg-success/20 text-success"
+                            : r.status === "rejected"
+                            ? "bg-destructive/20 text-destructive"
+                            : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
+                        {statusLabel(r.status)}
+                      </span>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td className="p-4 text-center text-muted-foreground" colSpan={5}>No submissions found</td></tr>
+                  <tr>
+                    <td
+                      className="p-4 text-center text-muted-foreground"
+                      colSpan={5}
+                    >
+                      No submissions found
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

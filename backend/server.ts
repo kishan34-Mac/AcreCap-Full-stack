@@ -147,17 +147,17 @@ const submissionSchema = z.object({
   email: z.string().email().max(160),
   city: z.string().min(1).max(120),
 
-  businessName: z.string().min(1).max(160),
-  businessType: z.string().min(1).max(160),
-  annualTurnover: z.string().min(1).max(160),
-  yearsInBusiness: z.string().min(1).max(60),
+  business_name: z.string().min(1).max(160),
+  business_type: z.string().min(1).max(160),
+  annual_turnover: z.string().min(1).max(160),
+  years_in_business: z.string().min(1).max(60),
 
-  loanAmount: z.string().min(1).max(120),
-  loanPurpose: z.string().min(1).max(200),
+  loan_amount: z.string().min(1).max(120),
+  loan_purpose: z.string().min(1).max(200),
   tenure: z.string().min(1).max(60),
 
-  panNumber: z.string().nullable().optional(),
-  gstNumber: z.string().nullable().optional(),
+  pan_number: z.string().nullable().optional(),
+  gst_number: z.string().nullable().optional(),
 
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
 });
@@ -207,12 +207,10 @@ app.use((req, res, next) => {
  * ---------------------- */
 app.get("/api/users/me", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const userId = (req as any).userId;
   if (!userId) return res.status(401).json({ error: "unauthorized" });
@@ -229,12 +227,10 @@ app.get("/api/users/me", async (req, res) => {
 
 app.put("/api/users/me", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const userId = (req as any).userId;
   if (!userId) return res.status(401).json({ error: "unauthorized" });
@@ -258,12 +254,10 @@ app.put("/api/users/me", async (req, res) => {
 
 app.post("/api/users/role", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const callerId = (req as any).userId;
   if (!callerId) return res.status(401).json({ error: "unauthorized" });
@@ -298,12 +292,10 @@ app.post("/api/users/role", async (req, res) => {
 // Sync: upsert caller into profiles using auth email
 app.post("/api/users/sync", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const callerId = (req as any).userId;
   if (!callerId) return res.status(401).json({ error: "unauthorized" });
@@ -368,12 +360,10 @@ async function isAdminRequest(req: express.Request): Promise<boolean> {
 
 app.post("/api/submissions", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const parsed = submissionSchema.safeParse(req.body);
   if (!parsed.success)
@@ -396,12 +386,10 @@ app.post("/api/submissions", async (req, res) => {
 
 app.get("/api/submissions", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const ok = await isAdminRequest(req);
   if (!ok) return res.status(403).json({ error: "forbidden" });
@@ -417,12 +405,10 @@ app.get("/api/submissions", async (req, res) => {
 
 app.patch("/api/submissions/:id", async (req, res) => {
   if (!supabase)
-    return res
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        message: "Supabase not configured",
-      });
+    return res.status(503).json({
+      error: "service_unavailable",
+      message: "Supabase not configured",
+    });
 
   const ok = await isAdminRequest(req);
   if (!ok) return res.status(403).json({ error: "forbidden" });

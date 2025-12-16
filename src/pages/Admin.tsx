@@ -52,15 +52,15 @@ interface SubmissionRow {
   mobile: string;
   email: string;
   city: string;
-  businessName: string;
-  businessType: string;
-  annualTurnover: string;
-  yearsInBusiness: string;
-  loanAmount: string;
-  loanPurpose: string;
+  business_name: string;
+  business_type: string;
+  annual_turnover: string;
+  years_in_business: string;
+  loan_amount: string;
+  loan_purpose: string;
   tenure: string;
-  panNumber: string | null;
-  gstNumber: string | null;
+  pan_number: string | null;
+  gst_number: string | null;
   status: "pending" | "approved" | "rejected";
 }
 
@@ -180,14 +180,14 @@ export default function Admin() {
           r.mobile,
           r.email,
           r.city,
-          r.businessName,
-          r.businessType,
-          r.annualTurnover,
-          r.yearsInBusiness,
-          r.loanAmount,
-          r.loanPurpose,
+          r.business_name,
+          r.business_type,
+          r.annual_turnover,
+          r.years_in_business,
+          r.loan_amount,
+          r.loan_purpose,
           r.tenure,
-          r.panNumber ?? "",
+          r.pan_number ?? "",
           r.gstNumber ?? "",
           r.user_id ?? "",
         ]
@@ -419,7 +419,7 @@ export default function Admin() {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!q) return true;
       const hay =
-        `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.businessName} ${r.loanAmount}`.toLowerCase();
+        `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.business_name} ${r.loan_amount}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, search, statusFilter]);
