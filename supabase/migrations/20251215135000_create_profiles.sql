@@ -43,11 +43,39 @@ for each row execute procedure public.handle_new_user();
 -- Enable RLS and add policies: users may access only their own profile
 alter table public.profiles enable row level security;
 
-create policy if not exists "profiles_select_own" on public.profiles
-for select using (auth.uid() = id);
+-- Create policies only if they don't exist
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'profiles' AND p.polname = 'profiles_select_own'
+  ) THEN
+    CREATE POLICY "profiles_select_own" ON public.profiles
+    FOR SELECT USING (auth.uid() = id);
+  END IF;
+END $$;
 
-create policy if not exists "profiles_update_own" on public.profiles
-for update using (auth.uid() = id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'profiles' AND p.polname = 'profiles_update_own'
+  ) THEN
+    CREATE POLICY "profiles_update_own" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id);
+  END IF;
+END $$;
 
-create policy if not exists "profiles_insert_own" on public.profiles
-for insert with check (auth.uid() = id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'profiles' AND p.polname = 'profiles_insert_own'
+  ) THEN
+    CREATE POLICY "profiles_insert_own" ON public.profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
