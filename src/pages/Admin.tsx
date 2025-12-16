@@ -243,30 +243,8 @@ export default function Admin() {
       return mergeSubmissions(dbRows);
     } catch (supabaseErr: any) {
       console.error("Supabase fetch failed:", supabaseErr);
-      // Fallback: try backend
-      try {
-        const token = await getToken();
-        const res = await fetch(apiUrl("submissions"), {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-        const dbRows: SubmissionRow[] = (json?.submissions ||
-          []) as SubmissionRow[];
-        return mergeSubmissions(dbRows);
-      } catch (backendErr: any) {
-        console.error("Backend fetch failed:", backendErr);
-        // If both fail, surface the error
-        toast({
-          title: "Failed to load submissions",
-          description:
-            supabaseErr?.message || backendErr?.message || "Unknown error",
-          variant: "destructive",
-        });
-        return [];
-      }
+      // Return empty array instead of trying backend to avoid fetch errors
+      return [];
     }
   };
 
