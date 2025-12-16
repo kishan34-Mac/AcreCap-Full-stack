@@ -188,7 +188,7 @@ export default function Admin() {
           r.loan_purpose,
           r.tenure,
           r.pan_number ?? "",
-          r.gstNumber ?? "",
+          r.gst_number ?? "",
           r.user_id ?? "",
         ]
           .map(escapeCsv)
@@ -734,7 +734,7 @@ export default function Admin() {
                           GST
                         </span>
                         <div className="font-medium">
-                          {selected.gstNumber || "-"}
+                          {selected.gst_number || "-"}
                         </div>
                       </div>
                     </div>
