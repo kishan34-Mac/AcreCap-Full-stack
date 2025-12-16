@@ -96,7 +96,7 @@ const Auth = () => {
         event === "SIGNED_OUT" ||
         (!session?.user && event === "USER_UPDATED")
       ) {
-        await logActivity("user_logout", {});
+        await logActivity("user_logout", { email: session?.user?.email });
         navigate("/");
       }
     });
