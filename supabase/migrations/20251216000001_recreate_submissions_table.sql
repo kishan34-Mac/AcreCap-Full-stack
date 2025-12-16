@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS public.submissions CASCADE;
 CREATE TABLE public.submissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
   user_id uuid NULL,
   name text NOT NULL,
   mobile text NOT NULL,
@@ -27,6 +28,11 @@ CREATE TABLE public.submissions (
 
 -- Enable Row Level Security (required by Supabase)
 ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;
+
+-- Add trigger for updated_at
+CREATE TRIGGER set_submissions_updated_at
+BEFORE UPDATE ON public.submissions
+FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
 
 -- Create policies only if they don't exist using pg_catalog.pg_policy (Postgres system catalog)
 DO $$ BEGIN
