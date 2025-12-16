@@ -7,72 +7,80 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
-// optional fallback (keep if you want)
-const ADMIN_EMAILS =
-  (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)
-    ?.split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean) || [];
-
 const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
 
 export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) => {
   const location = useLocation();
 
   const [loading, setLoading] = useState(true);
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let alive = true;
 
-    const compute = async () => {
+    const check = async () => {
       setLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!alive) return;
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
 
       const token = session?.access_token ?? null;
-      const email = session?.user?.email?.toLowerCase() ?? null;
+      const authed = !!session?.user;
 
-      setIsAuthenticated(!!session?.user);
-      setSessionEmail(email);
+      if (!alive) return;
 
-      // default
-      let admin = false;
+      setIsAuthenticated(authed);
 
-      // If admin route requested, verify admin
-      if (requireAdmin && token) {
-        // 1) Preferred: backend role
-        if (BACKEND) {
-          try {
-            const res = await fetch(`${BACKEND}/api/users/me`, {
-              headers: { Authorization: `Bearer ${token}` },
-              credentials: "include",
-            });
-            const json = await res.json();
-            admin = json?.profile?.role === "admin";
-          } catch {
-            admin = false;
-          }
-        }
-
-        // 2) Fallback: env email list (optional)
-        if (!admin && email) {
-          admin = ADMIN_EMAILS.includes(email);
-        }
+      // Not logged in OR not admin route → no need to check admin
+      if (!authed || !requireAdmin) {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
       }
 
-      setIsAdmin(admin);
-      setLoading(false);
+      // Logged in + requireAdmin → must verify role from backend
+      if (!BACKEND || !token) {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (!alive) return;
+
+        if (res.status === 401) {
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        const json = await res.json().catch(() => ({}));
+        if (!alive) return;
+
+        setIsAdmin(json?.profile?.role === "admin");
+      } catch {
+        if (!alive) return;
+        setIsAdmin(false);
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
     };
 
+    // ✅ correct destructuring for supabase-js v2
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      compute();
+      check();
     });
 
-    compute();
+    check();
 
     return () => {
       alive = false;
@@ -88,19 +96,15 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
     );
   }
 
-  // Not logged in
   if (!isAuthenticated) {
-    // admin pages -> admin login
-    if (requireAdmin) {
-      return <Navigate to="/admin/login" replace state={{ from: location }} />;
-    }
-    // normal protected pages -> user login
-    return <Navigate to="/auth" replace state={{ from: location }} />;
+    return requireAdmin ? (
+      <Navigate to="/admin/login" replace state={{ from: location }} />
+    ) : (
+      <Navigate to="/auth" replace state={{ from: location }} />
+    );
   }
 
-  // Logged in but not admin
   if (requireAdmin && !isAdmin) {
-    // you can also Navigate to="/auth" if you want
     return <Navigate to="/admin/login" replace state={{ from: location }} />;
   }
 
