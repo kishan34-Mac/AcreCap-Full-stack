@@ -24,19 +24,36 @@ CREATE TABLE IF NOT EXISTS public.submissions (
 -- Enable Row Level Security (required by Supabase)
 ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;
 
--- Allow read access to anyone (anon & authenticated)
-CREATE POLICY IF NOT EXISTS "Allow public read submissions"
-  ON public.submissions
-  FOR SELECT
-  TO anon, authenticated
-  USING (true);
+-- Create policies only if they don't exist using pg_catalog.pg_policy (Postgres system catalog)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'submissions' AND p.polname = 'Allow public read submissions'
+  ) THEN
+    CREATE POLICY "Allow public read submissions"
+      ON public.submissions
+      FOR SELECT
+      TO anon, authenticated
+      USING (true);
+  END IF;
+END $$;
 
--- Allow inserts from anyone (anon & authenticated) so unauthenticated users can submit
-CREATE POLICY IF NOT EXISTS "Allow public insert submissions"
-  ON public.submissions
-  FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'submissions' AND p.polname = 'Allow public insert submissions'
+  ) THEN
+    CREATE POLICY "Allow public insert submissions"
+      ON public.submissions
+      FOR INSERT
+      TO anon, authenticated
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- Helpful index for sorting/filtering
 CREATE INDEX IF NOT EXISTS submissions_created_at_idx ON public.submissions (created_at);
