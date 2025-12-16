@@ -1,56 +1,58 @@
-import { useState } from 'react';
-import { Layout } from '@/components/layout/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const contactInfo = [
   {
     icon: MapPin,
-    title: 'Visit Us',
-    details: ['123 Finance Street', 'Business District', 'Mumbai 400001'],
+    title: "Visit Us",
+    details: ["123 Finance Street", "Business District", "Mumbai 400001"],
   },
   {
     icon: Phone,
-    title: 'Call Us',
-    details: ['+91 99999 99999', '+91 88888 88888'],
+    title: "Call Us",
+    details: ["+91 99999 99999", "+91 88888 88888"],
   },
   {
     icon: Mail,
-    title: 'Email Us',
-    details: ['info@finleaf.com', 'support@finleaf.com'],
+    title: "Email Us",
+    details: ["acrecap.Loan@gmail.com", "support@finleaf.com"],
   },
   {
     icon: Clock,
-    title: 'Working Hours',
-    details: ['Mon - Fri: 9:00 AM - 6:00 PM', 'Sat: 10:00 AM - 4:00 PM'],
+    title: "Working Hours",
+    details: ["Mon - Fri: 9:00 AM - 6:00 PM", "Sat: 10:00 AM - 4:00 PM"],
   },
 ];
 
 export default function Contact() {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: '',
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({
-      title: 'Message Sent!',
-      description: 'We will get back to you within 24 hours.',
+      title: "Message Sent!",
+      description: "We will get back to you within 24 hours.",
     });
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
   };
 
   // WhatsApp redirection removed
@@ -65,11 +67,11 @@ export default function Contact() {
               Get in Touch
             </span>
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-6">
-              We're Here to{' '}
-              <span className="gradient-text">Help You</span>
+              We're Here to <span className="gradient-text">Help You</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Have questions about our services? Our team is ready to assist you. Reach out to us through any of the channels below.
+              Have questions about our services? Our team is ready to assist
+              you. Reach out to us through any of the channels below.
             </p>
           </div>
         </div>
@@ -88,9 +90,13 @@ export default function Contact() {
                       <info.icon className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">{info.title}</h3>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        {info.title}
+                      </h3>
                       {info.details.map((detail, j) => (
-                        <p key={j} className="text-sm text-muted-foreground">{detail}</p>
+                        <p key={j} className="text-sm text-muted-foreground">
+                          {detail}
+                        </p>
                       ))}
                     </div>
                   </div>
@@ -99,7 +105,11 @@ export default function Contact() {
 
               <div className="flex flex-col gap-2">
                 <Button variant="outline" className="w-full" size="lg" asChild>
-                  <a href="https://wa.me/919696255795?text=Hello%21%20I%20would%20like%20detailed%20information%20about%20the%20loan.%20Please%20share%20eligibility%20criteria%2C%20interest%20rates%2C%20required%20documents%2C%20tenure%20options%2C%20and%20processing%20time.%20Thank%20you." target="_blank" rel="noopener noreferrer">
+                  <a
+                    href="https://wa.me/919696255795?text=Hello%21%20I%20would%20like%20detailed%20information%20about%20the%20loan.%20Please%20share%20eligibility%20criteria%2C%20interest%20rates%2C%20required%20documents%2C%20tenure%20options%2C%20and%20processing%20time.%20Thank%20you."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Phone className="w-5 h-5 mr-2" />
                     Chat on WhatsApp
                   </a>
@@ -116,7 +126,9 @@ export default function Contact() {
             {/* Contact Form */}
             <div className="lg:col-span-2">
               <div className="glass-card p-6 sm:p-10">
-                <h2 className="text-2xl font-bold text-foreground mb-6">Send us a Message</h2>
+                <h2 className="text-2xl font-bold text-foreground mb-6">
+                  Send us a Message
+                </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -192,7 +204,9 @@ export default function Contact() {
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center">
             <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Interactive map would be displayed here</p>
+            <p className="text-muted-foreground">
+              Interactive map would be displayed here
+            </p>
           </div>
         </div>
       </section>
