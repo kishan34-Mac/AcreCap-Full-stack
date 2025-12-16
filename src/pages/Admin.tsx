@@ -229,33 +229,34 @@ export default function Admin() {
   // Helper: fetch all submissions from DB
   const fetchAllSubmissions = async (): Promise<SubmissionRow[]> => {
     try {
-      const token = await getToken();
-      const res = await fetch(apiUrl("submissions"), {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-      const dbRows: SubmissionRow[] = (json?.submissions ||
-        []) as SubmissionRow[];
+      // Try Supabase directly first
+      const { data, error } = await (supabase as any)
+        .from("submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const dbRows: SubmissionRow[] = (data || []) as SubmissionRow[];
       return mergeSubmissions(dbRows);
-    } catch (backendErr: any) {
-      // Fallback: try Supabase directly (requires RLS policy granting admins access)
+    } catch (supabaseErr: any) {
+      // Fallback: try backend
       try {
-        const { data, error } = await (supabase as any)
-          .from("submissions")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        const dbRows: SubmissionRow[] = (data || []) as SubmissionRow[];
+        const token = await getToken();
+        const res = await fetch(apiUrl("submissions"), {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        const dbRows: SubmissionRow[] = (json?.submissions ||
+          []) as SubmissionRow[];
         return mergeSubmissions(dbRows);
-      } catch (supabaseErr: any) {
-        // If both fail, surface the backend error
+      } catch (backendErr: any) {
+        // If both fail, surface the error
         toast({
           title: "Failed to load submissions",
           description:
-            backendErr?.message || supabaseErr?.message || "Unknown error",
+            supabaseErr?.message || backendErr?.message || "Unknown error",
           variant: "destructive",
         });
         return [];
@@ -270,10 +271,10 @@ export default function Admin() {
     const load = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user?.email?.toLowerCase();
-      if (!email || !ADMIN_EMAILS.includes(email)) {
+      if (!email) {
         toast({
           title: "Access denied",
-          description: "You are not authorized to view this page.",
+          description: "You must be logged in to view this page.",
           variant: "destructive",
         });
         setIsAuthorized(false);
@@ -346,72 +347,7 @@ export default function Admin() {
     };
   }, []);
 
-  // (duplicate fetchAllSubmissions removed)
-  useEffect(() => {
-    let mounted = true;
-    let channel: any;
-    const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const email = sessionData.session?.user?.email?.toLowerCase();
-      if (!email || !ADMIN_EMAILS.includes(email)) {
-        toast({
-          title: "Access denied",
-          description: "You are not authorized to view this page.",
-          variant: "destructive",
-        });
-        setIsAuthorized(false);
-        setLoading(false);
-        return;
-      }
-      // Ensure admin email exists in admin_emails table for RLS-based privileges
-      try {
-        const { data: adminRow } = await (supabase as any)
-          .from("admin_emails")
-          .select("email")
-          .eq("email", email)
-          .maybeSingle();
-        if (!adminRow) {
-          await (supabase as any).from("admin_emails").insert({ email });
-        }
-      } catch (e) {
-        // non-blocking if table/policy prevents insert; submission updates may still work depending on RLS
-      }
-      setIsAuthorized(true);
-      try {
-        const dbRows = await fetchAllSubmissions();
-        if (!mounted) return;
-        setRows(dbRows);
-      } catch (e: any) {
-        setRows([]);
-        toast({
-          title: "Load failed",
-          description: e?.message || "Unable to load submissions from backend",
-          variant: "destructive",
-        });
-      }
-      setLoading(false);
 
-      // Realtime: subscribe to all changes in submissions for admin view
-      try {
-        channel = (supabase as any)
-          .channel("submissions-admin")
-          .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "submissions" },
-            async () => {
-              const latest = await fetchAllSubmissions();
-              if (mounted) setRows(latest);
-            }
-          );
-        channel?.subscribe?.();
-      } catch {}
-    };
-    load();
-    return () => {
-      mounted = false;
-      if (channel) (supabase as any).removeChannel(channel);
-    };
-  }, [toast]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
