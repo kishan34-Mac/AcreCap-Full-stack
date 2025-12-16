@@ -170,6 +170,16 @@ app.use(async (req, _res, next) => {
 });
 
 /** -----------------------
+ * ✅ NEW: Prevent caching on /api/users/me
+ * ---------------------- */
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/users/me")) {
+    res.set("Cache-Control", "no-store");
+  }
+  next();
+});
+
+/** -----------------------
  * Users
  * ---------------------- */
 app.get("/api/users/me", async (req, res) => {
@@ -210,11 +220,7 @@ app.post("/api/users/role", async (req, res) => {
   const callerId = (req as any).userId;
   if (!callerId) return res.status(401).json({ error: "unauthorized" });
 
-  const { data: caller, error: callerErr } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", callerId)
-    .maybeSingle();
+  const { data: caller, error: callerErr } = await supabase.from("profiles").select("role").eq("id", callerId).maybeSingle();
 
   if (callerErr) return res.status(500).json({ error: callerErr.message });
   if (!caller || caller.role !== "admin") return res.status(403).json({ error: "forbidden" });
