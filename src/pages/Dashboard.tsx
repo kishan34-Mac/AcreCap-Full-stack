@@ -159,7 +159,7 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold">My Dashboard</h1>
             <div className="flex gap-2">
               <Button variant="accent" asChild><Link to="/apply">New Application</Link></Button>
-              // Remove WhatsApp Support button
+             
               <Button variant="outline" onClick={handleExportCsv}>Export CSV</Button>
             </div>
           </div>
