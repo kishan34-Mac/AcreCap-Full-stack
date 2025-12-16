@@ -251,7 +251,6 @@ export default function Admin() {
   // (removed) mergeSubmissions that previously merged local rows
   useEffect(() => {
     let mounted = true;
-    let channel: any;
     const load = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user?.email?.toLowerCase();
@@ -288,46 +287,13 @@ export default function Admin() {
         setLoading(false);
       }
 
-      // Subscribe to realtime changes
-      try {
-        channel = (supabase as any).channel?.("submissions_changes");
-        channel?.on?.(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "submissions",
-          },
-          (payload: any) => {
-            const newRow = payload?.new as SubmissionRow | undefined;
-            const oldRow = payload?.old as SubmissionRow | undefined;
-            if (newRow && (!oldRow || newRow.id !== oldRow.id)) {
-              setRows((prev) =>
-                mergeSubmissions([
-                  newRow,
-                  ...prev.filter((r) => r.id !== newRow.id),
-                ])
-              );
-            } else if (oldRow && !newRow) {
-              setRows((prev) => prev.filter((r) => r.id !== oldRow.id));
-            } else if (newRow && oldRow && newRow.id === oldRow.id) {
-              setRows((prev) =>
-                prev.map((r) => (r.id === newRow.id ? newRow : r))
-              );
-            }
-          }
-        );
-        channel?.subscribe?.();
-      } catch {}
+      // Realtime subscription removed to prevent fetch errors
     };
 
     load();
 
     return () => {
       mounted = false;
-      try {
-        channel?.unsubscribe?.();
-      } catch {}
     };
   }, []);
 
