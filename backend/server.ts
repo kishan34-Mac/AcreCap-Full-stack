@@ -27,12 +27,13 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 /** -----------------------
  * CORS
  * ---------------------- */
-const allowedOrigins =
-  process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) ?? [
-    "http://localhost:5173",
-    "http://localhost:8080",
-    "http://localhost:8081",
-  ];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",")
+  .map((o) => o.trim())
+  .filter(Boolean) ?? [
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "http://localhost:8081",
+];
 
 app.use(
   cors({
@@ -53,8 +54,11 @@ app.use(morgan("tiny"));
 /** -----------------------
  * Security headers (Helmet)
  * ---------------------- */
-const rawSupabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseCspOrigins = rawSupabaseUrl ? [new URL(rawSupabaseUrl).origin] : ["https://*.supabase.co"];
+const rawSupabaseUrl =
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseCspOrigins = rawSupabaseUrl
+  ? [new URL(rawSupabaseUrl).origin]
+  : ["https://*.supabase.co"];
 
 app.use(
   helmet({
@@ -65,11 +69,25 @@ app.use(
         "base-uri": ["'self'"],
         "img-src": ["'self'", "data:", "https:"],
         "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
-        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
         "script-src": ["'self'", "'unsafe-inline'"],
-        "connect-src": ["'self'", "https:", "wss:", ...supabaseCspOrigins, "https://*.supabase.co"],
+        "connect-src": [
+          "'self'",
+          "https:",
+          "wss:",
+          ...supabaseCspOrigins,
+          "https://*.supabase.co",
+        ],
         "frame-src": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
-        "form-action": ["'self'", ...supabaseCspOrigins, "https://*.supabase.co"],
+        "form-action": [
+          "'self'",
+          ...supabaseCspOrigins,
+          "https://*.supabase.co",
+        ],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -93,12 +111,15 @@ app.use(
  * Supabase (service role) for backend
  * ---------------------- */
 const SUPABASE_URL = process.env.SUPABASE_URL; // prefer backend-only env
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
 
 let supabase: SupabaseClient | null = null;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn("⚠️ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. API routes will return 503.");
+  console.warn(
+    "⚠️ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. API routes will return 503."
+  );
 } else {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -148,7 +169,9 @@ async function getAuthUserId(req: express.Request): Promise<string | null> {
   if (!supabase) return null;
 
   const auth = req.header("authorization") || req.header("Authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice("Bearer ".length).trim()
+    : null;
 
   if (token) {
     const { data, error } = await supabase.auth.getUser(token);
@@ -183,25 +206,44 @@ app.use((req, res, next) => {
  * Users
  * ---------------------- */
 app.get("/api/users/me", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const userId = (req as any).userId;
   if (!userId) return res.status(401).json({ error: "unauthorized" });
 
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
 
   return res.json({ profile: data });
 });
 
 app.put("/api/users/me", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const userId = (req as any).userId;
   if (!userId) return res.status(401).json({ error: "unauthorized" });
 
   const parsed = profileUpdateSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+  if (!parsed.success)
+    return res
+      .status(400)
+      .json({ error: "validation_error", details: parsed.error.flatten() });
 
   const { data, error } = await supabase
     .from("profiles")
@@ -215,18 +257,32 @@ app.put("/api/users/me", async (req, res) => {
 });
 
 app.post("/api/users/role", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const callerId = (req as any).userId;
   if (!callerId) return res.status(401).json({ error: "unauthorized" });
 
-  const { data: caller, error: callerErr } = await supabase.from("profiles").select("role").eq("id", callerId).maybeSingle();
+  const { data: caller, error: callerErr } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", callerId)
+    .maybeSingle();
 
   if (callerErr) return res.status(500).json({ error: callerErr.message });
-  if (!caller || caller.role !== "admin") return res.status(403).json({ error: "forbidden" });
+  if (!caller || caller.role !== "admin")
+    return res.status(403).json({ error: "forbidden" });
 
   const parsed = roleUpdateSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+  if (!parsed.success)
+    return res
+      .status(400)
+      .json({ error: "validation_error", details: parsed.error.flatten() });
 
   const { data, error } = await supabase
     .from("profiles")
@@ -241,22 +297,33 @@ app.post("/api/users/role", async (req, res) => {
 
 // Sync: upsert caller into profiles using auth email
 app.post("/api/users/sync", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const callerId = (req as any).userId;
   if (!callerId) return res.status(401).json({ error: "unauthorized" });
 
   const auth = req.header("authorization") || req.header("Authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice("Bearer ".length).trim()
+    : null;
   if (!token) return res.status(401).json({ error: "unauthorized" });
 
   const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) return res.status(401).json({ error: "invalid_token" });
+  if (error || !data.user)
+    return res.status(401).json({ error: "invalid_token" });
 
   const email = data.user.email;
+  const full_name = data.user.user_metadata?.full_name || null;
+  const phone = data.user.phone || null;
   const { data: upserted, error: upsertErr } = await supabase
     .from("profiles")
-    .upsert({ id: callerId, email }, { onConflict: "id" })
+    .upsert({ id: callerId, email, full_name, phone }, { onConflict: "id" })
     .select("*")
     .maybeSingle();
 
@@ -267,7 +334,11 @@ app.post("/api/users/sync", async (req, res) => {
 /** -----------------------
  * Submissions
  * ---------------------- */
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || "")
+const ADMIN_EMAILS = (
+  process.env.ADMIN_EMAILS ||
+  process.env.VITE_ADMIN_EMAILS ||
+  ""
+)
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
@@ -276,7 +347,9 @@ async function isAdminRequest(req: express.Request): Promise<boolean> {
   if (!supabase) return false;
 
   const auth = req.header("authorization") || req.header("Authorization") || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : null;
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice("Bearer ".length).trim()
+    : null;
   if (!token) return false;
 
   const { data, error } = await supabase.auth.getUser(token);
@@ -285,46 +358,83 @@ async function isAdminRequest(req: express.Request): Promise<boolean> {
   const email = data.user.email?.toLowerCase();
   if (email && ADMIN_EMAILS.includes(email)) return true;
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
   return profile?.role === "admin";
 }
 
 app.post("/api/submissions", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const parsed = submissionSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+  if (!parsed.success)
+    return res
+      .status(400)
+      .json({ error: "validation_error", details: parsed.error.flatten() });
 
   const userId = (req as any).userId;
   const payload = { ...parsed.data, user_id: userId ?? null };
 
-  const { data, error } = await supabase.from("submissions").insert(payload).select("*").maybeSingle();
+  const { data, error } = await supabase
+    .from("submissions")
+    .insert(payload)
+    .select("*")
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
 
   return res.json({ submission: data });
 });
 
 app.get("/api/submissions", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const ok = await isAdminRequest(req);
   if (!ok) return res.status(403).json({ error: "forbidden" });
 
-  const { data, error } = await supabase.from("submissions").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("submissions")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
 
   return res.json({ submissions: data || [] });
 });
 
 app.patch("/api/submissions/:id", async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: "service_unavailable", message: "Supabase not configured" });
+  if (!supabase)
+    return res
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        message: "Supabase not configured",
+      });
 
   const ok = await isAdminRequest(req);
   if (!ok) return res.status(403).json({ error: "forbidden" });
 
-  const statusSchema = z.object({ status: z.enum(["pending", "approved", "rejected"]) });
+  const statusSchema = z.object({
+    status: z.enum(["pending", "approved", "rejected"]),
+  });
   const parsed = statusSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+  if (!parsed.success)
+    return res
+      .status(400)
+      .json({ error: "validation_error", details: parsed.error.flatten() });
 
   const { data, error } = await supabase
     .from("submissions")
@@ -345,15 +455,27 @@ app.use("/api", (_req, res) => res.status(404).json({ error: "not_found" }));
 /** -----------------------
  * Root route (for Render)
  * ---------------------- */
-app.get("/", (_req, res) => res.status(200).type("text/plain").send("AcreCap backend running. Use /healthz and /api/*"));
+app.get("/", (_req, res) =>
+  res
+    .status(200)
+    .type("text/plain")
+    .send("AcreCap backend running. Use /healthz and /api/*")
+);
 
 /** -----------------------
  * Error handler
  * ---------------------- */
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({ error: "server_error" });
-});
+app.use(
+  (
+    err: any,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({ error: "server_error" });
+  }
+);
 
 /** -----------------------
  * Listen

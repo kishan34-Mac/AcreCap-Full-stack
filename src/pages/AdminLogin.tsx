@@ -45,9 +45,10 @@ export default function AdminLogin() {
 
   // where to go after login
   const fromPath =
-    (location.state as any)?.from?.pathname && typeof (location.state as any).from.pathname === "string"
+    (location.state as any)?.from?.pathname &&
+    typeof (location.state as any).from.pathname === "string"
       ? (location.state as any).from.pathname
-      : "/admin";
+      : "/dashboard";
 
   // If already logged in and admin, go where user came from (or /admin)
   useEffect(() => {
@@ -85,7 +86,11 @@ export default function AdminLogin() {
       });
 
       if (error) {
-        toast({ title: "Login failed", description: error.message, variant: "destructive" });
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -130,7 +135,9 @@ export default function AdminLogin() {
         <div className="container-custom max-w-lg">
           <div className="glass-card p-6">
             <h1 className="text-2xl font-bold mb-1">Admin Login</h1>
-            <p className="text-muted-foreground mb-6">Enter your admin credentials to access the panel.</p>
+            <p className="text-muted-foreground mb-6">
+              Enter your admin credentials to access the panel.
+            </p>
 
             <div className="space-y-4">
               <div className="grid gap-2">
@@ -155,7 +162,11 @@ export default function AdminLogin() {
                 />
               </div>
 
-              <Button className="w-full" onClick={handleLogin} disabled={loading}>
+              <Button
+                className="w-full"
+                onClick={handleLogin}
+                disabled={loading}
+              >
                 {loading ? "Signing in..." : "Login"}
               </Button>
 
