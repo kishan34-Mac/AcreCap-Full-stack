@@ -30,17 +30,73 @@ const App = () => (
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/apply" element={<ProtectedRoute><Apply /></ProtectedRoute>} />
-            <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+            <Route
+              path="/apply"
+              element={
+                <ProtectedRoute>
+                  <Apply />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/thank-you"
+              element={
+                <ProtectedRoute>
+                  <ThankYou />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
             {/* Removed Profile route */}
             {/* <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> */}
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
+
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="/loans/:type" element={<LoanPage />} />
             <Route path="/insurance/:type" element={<InsurancePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

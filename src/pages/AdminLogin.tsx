@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,59 +22,74 @@ async function fetchMe(accessToken: string) {
 
 async function syncUser(accessToken: string) {
   if (!BACKEND) throw new Error("Missing VITE_BACKEND_URL");
-  await fetch(`${BACKEND}/api/users/sync`, {
+  const res = await fetch(`${BACKEND}/api/users/sync`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}` },
     credentials: "include",
   });
+  // optional: surface backend errors
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json?.error || "Failed to sync user");
+  }
 }
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // If already logged in and admin, go to /admin
+  // where to go after login
+  const fromPath =
+    (location.state as any)?.from?.pathname && typeof (location.state as any).from.pathname === "string"
+      ? (location.state as any).from.pathname
+      : "/admin";
+
+  // If already logged in and admin, go where user came from (or /admin)
   useEffect(() => {
+    let alive = true;
+
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token || !alive) return;
 
       try {
         await syncUser(token);
         const me = await fetchMe(token);
+        if (!alive) return;
+
         if (me?.profile?.role === "admin") {
-          navigate("/admin", { replace: true });
+          navigate(fromPath, { replace: true });
         }
       } catch {
         // ignore auto-redirect errors
       }
     })();
-  }, [navigate]);
+
+    return () => {
+      alive = false;
+    };
+  }, [navigate, fromPath]);
 
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: "Login failed", description: error.message, variant: "destructive" });
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const token = data.session?.access_token;
       if (!token) {
         toast({
           title: "Login error",
@@ -97,7 +112,7 @@ export default function AdminLogin() {
       }
 
       toast({ title: "Welcome", description: "Admin login successful." });
-      navigate("/admin", { replace: true });
+      navigate(fromPath, { replace: true });
     } catch (e: any) {
       toast({
         title: "Login error",
@@ -115,9 +130,7 @@ export default function AdminLogin() {
         <div className="container-custom max-w-lg">
           <div className="glass-card p-6">
             <h1 className="text-2xl font-bold mb-1">Admin Login</h1>
-            <p className="text-muted-foreground mb-6">
-              Enter your admin credentials to access the panel.
-            </p>
+            <p className="text-muted-foreground mb-6">Enter your admin credentials to access the panel.</p>
 
             <div className="space-y-4">
               <div className="grid gap-2">
