@@ -234,10 +234,15 @@ export default function Admin() {
         .from("submissions")
         .select("*")
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase fetch error:", error);
+        throw error;
+      }
+      console.log("Fetched data from Supabase:", data);
       const dbRows: SubmissionRow[] = (data || []) as SubmissionRow[];
       return mergeSubmissions(dbRows);
     } catch (supabaseErr: any) {
+      console.error("Supabase fetch failed:", supabaseErr);
       // Fallback: try backend
       try {
         const token = await getToken();
@@ -252,6 +257,7 @@ export default function Admin() {
           []) as SubmissionRow[];
         return mergeSubmissions(dbRows);
       } catch (backendErr: any) {
+        console.error("Backend fetch failed:", backendErr);
         // If both fail, surface the error
         toast({
           title: "Failed to load submissions",
@@ -346,8 +352,6 @@ export default function Admin() {
       } catch {}
     };
   }, []);
-
-
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
