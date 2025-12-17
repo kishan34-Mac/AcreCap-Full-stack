@@ -49,7 +49,9 @@ AcreCap is a business loans and insurance application originally built with Lova
 - `DATABASE_URL` - Neon PostgreSQL connection string (auto-configured)
 - `VITE_SUPABASE_URL` - Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` - Supabase anon/public key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for backend auth validation)
 - `VITE_ADMIN_EMAILS` - Comma-separated admin email addresses
+- `ADMIN_EMAILS` - Server-side admin email list (same as VITE_ADMIN_EMAILS)
 - `VITE_BACKEND_URL` - Backend API URL (optional, defaults to same origin)
 
 ## Recent Changes (Dec 2024)
@@ -59,6 +61,7 @@ AcreCap is a business loans and insurance application originally built with Lova
 4. Made Supabase auth optional - app runs without credentials
 5. Fixed CSP policy for Vite HMR WebSocket connections
 6. Updated ProtectedRoute and Navbar to handle missing Supabase gracefully
+7. Added auth middleware to validate Supabase JWT tokens on backend API routes
 
 ## Running the Project
 The workflow "Start application" runs `npm run dev` which starts:
