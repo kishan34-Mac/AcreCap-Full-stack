@@ -4,7 +4,7 @@ import { Menu, X, Sun, Moon, ChevronDown, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/lib/sync';
 import { useQueryClient } from '@tanstack/react-query';
@@ -74,6 +74,8 @@ export const Navbar = () => {
   const adminUsername = isAdmin && userEmail ? userEmail.split('@')[0] : null;
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const syncProfile = async (token?: string | null) => {
       try {
         if (!token) return;
@@ -131,13 +133,18 @@ export const Navbar = () => {
   };
 
   const handleLogout = async () => {
+    if (!isSupabaseConfigured) {
+      setIsAuthenticated(false);
+      setUserEmail(null);
+      navigate('/');
+      return;
+    }
+
     let logoutError: string | null = null;
 
-    // First check current session
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session) {
-      // Terminate server session
       try {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -150,19 +157,16 @@ export const Navbar = () => {
       }
     }
 
-    // Regardless of server result, tear down client state
     teardownRealtime();
     clearSupabaseAuthStorage();
 
     try { queryClient.clear(); } catch {}
 
-    // Force UI to show dashboard for logged-out users
     setIsAuthenticated(false);
     setUserEmail(null);
 
     if (logoutError) {
       toast({ title: 'Logout failed', description: logoutError, variant: 'destructive' });
-      // Still navigate to home to satisfy requirement
       navigate('/');
       return;
     }

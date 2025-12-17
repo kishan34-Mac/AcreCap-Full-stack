@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,6 +22,13 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
     const check = async () => {
       setLoading(true);
 
+      if (!isSupabaseConfigured) {
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       const session = data.session;
 
@@ -32,14 +39,12 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
 
       setIsAuthenticated(authed);
 
-      // Not logged in OR not admin route → no need to check admin
       if (!authed || !requireAdmin) {
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
-      // Logged in + requireAdmin → must verify role from backend
       if (!BACKEND || !token) {
         setIsAdmin(false);
         setLoading(false);
@@ -75,7 +80,11 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
       }
     };
 
-    // ✅ correct destructuring for supabase-js v2
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       check();
     });
@@ -91,7 +100,7 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        Checking authentication…
+        Checking authentication...
       </div>
     );
   }

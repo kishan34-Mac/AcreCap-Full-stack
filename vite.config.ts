@@ -1,29 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: process.env.VITE_PUBLIC_BASE || '/',
+  base: "/",
   server: {
-    host: "::",
-    port: 8080,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8787",
-        changeOrigin: true,
-        ws: true,
-      },
+    host: "0.0.0.0",
+    port: 5000,
+    allowedHosts: true,
+    hmr: {
+      clientPort: 443,
     },
   },
   build: {
-    sourcemap: mode === 'development',
+    outDir: "dist/public",
+    sourcemap: mode === "development",
     rollupOptions: {
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          supabase: ["@supabase/supabase-js"],
           radix: [
             "@radix-ui/react-accordion",
             "@radix-ui/react-alert-dialog",
@@ -58,10 +53,11 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@shared": path.resolve(__dirname, "./shared"),
     },
   },
 }));
