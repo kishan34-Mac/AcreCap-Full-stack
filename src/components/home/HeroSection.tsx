@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export const HeroSection = () => {
   return (
-    <section className="relative flex min-h-[78svh] items-center overflow-hidden pt-8 sm:min-h-[82svh] lg:min-h-[90vh]">
+    <section className="relative flex min-h-[auto] items-start overflow-hidden py-10 sm:min-h-[82svh] sm:items-center sm:py-0 lg:min-h-[90vh]">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-ocean/5 to-accent/5 animate-gradient" />
       
@@ -17,20 +17,20 @@ export const HeroSection = () => {
       <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.18)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.18)_1px,transparent_1px)] bg-[size:2.75rem_2.75rem] sm:bg-[size:4rem_4rem]" />
 
       <div className="container-custom relative z-10">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-20">
+        <div className="grid items-start gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-20">
           {/* Content */}
           <div className="text-center lg:text-left">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-2 text-xs font-medium text-primary animate-fade-up sm:mb-6 sm:px-4 sm:text-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-2 text-[11px] font-medium text-primary animate-fade-up sm:mb-6 sm:px-4 sm:text-sm">
               <Shield className="h-4 w-4" />
               Trusted by 10,000+ Customers
             </div>
 
-            <h1 className="mb-5 text-3xl font-bold leading-[1.08] text-foreground animate-fade-up sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="mb-4 text-[2rem] font-bold leading-[1.05] text-foreground animate-fade-up sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
               Instant Business Loans with{' '}
               <span className="gradient-text">Minimal Documentation</span>
             </h1>
 
-            <p className="mx-auto mb-7 max-w-xl text-sm leading-7 text-muted-foreground animate-fade-up-delayed sm:mb-8 sm:text-lg md:text-xl lg:mx-0">
+            <p className="mx-auto mb-6 max-w-xl text-sm leading-6 text-muted-foreground animate-fade-up-delayed sm:mb-8 sm:text-lg sm:leading-7 md:text-xl lg:mx-0">
               Fast approval • Best rates • Expert guidance. Get the financial support you need to grow your business.
             </p>
 
@@ -47,7 +47,7 @@ export const HeroSection = () => {
             </div>
 
             {/* Stats */}
-            <div className="mt-10 grid grid-cols-1 gap-3 animate-fade-up-delayed sm:grid-cols-3 sm:gap-4 lg:mt-12">
+            <div className="mt-8 grid grid-cols-1 gap-3 animate-fade-up-delayed sm:grid-cols-3 sm:gap-4 lg:mt-12">
               {[
                 { icon: Clock, label: 'Fast Approval', value: '24 Hours' },
                 { icon: TrendingUp, label: 'Interest Rate', value: 'From 10.5%' },
@@ -127,7 +127,7 @@ export const HeroSection = () => {
           </div>
 
           <div className="lg:hidden">
-            <div className="glass-card p-5">
+            <div className="glass-card p-4">
               <div className="mb-4 flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80">
                   <TrendingUp className="h-7 w-7 text-primary-foreground" />
@@ -143,11 +143,11 @@ export const HeroSection = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-secondary/50 p-4">
+                <div className="rounded-xl bg-secondary/50 p-3">
                   <p className="text-xs text-muted-foreground">EMI/Month</p>
                   <p className="text-base font-bold text-foreground">₹1,12,500</p>
                 </div>
-                <div className="rounded-xl bg-secondary/50 p-4">
+                <div className="rounded-xl bg-secondary/50 p-3">
                   <p className="text-xs text-muted-foreground">Tenure</p>
                   <p className="text-base font-bold text-foreground">60 Months</p>
                 </div>
