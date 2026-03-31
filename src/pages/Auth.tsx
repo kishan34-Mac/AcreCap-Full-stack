@@ -71,6 +71,12 @@ export default function Auth() {
       const message =
         error?.message === "email_already_registered"
           ? "This email is already registered. Please log in instead."
+          : error?.message === "reserved_admin_email"
+          ? "This email is reserved for admin access and cannot be used for user signup."
+          : error?.message === "admin_login_required"
+          ? "This email is reserved for admin access. Please use the admin login page."
+          : error?.message === "admin_access_required"
+          ? "This account is not allowed to use admin login."
           : error?.message === "invalid_credentials"
           ? "Invalid email or password."
           : error?.message || "Unable to complete your request.";

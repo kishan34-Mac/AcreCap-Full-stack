@@ -20,6 +20,8 @@ const authSchema = z.object({
   password: z.string().min(6).max(200),
 });
 
+const authAudienceSchema = z.enum(["user", "admin"]).default("user");
+
 const submissionSchema = z.object({
   name: z.string().min(1).max(120),
   mobile: z.string().min(8).max(20),
@@ -60,6 +62,13 @@ const isDatabaseUnavailable = (error: unknown) => {
   );
 };
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const isReservedAdminEmail = (email: string) => {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  return !!adminEmail && normalizeEmail(email) === adminEmail;
+};
+
 export async function registerRoutes(app: Express): Promise<void> {
   const persistSession = (req: any) =>
     new Promise<void>((resolve, reject) => {
@@ -95,12 +104,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
 
     try {
-      const existing = await storage.getUserByEmail(parsed.data.email);
+      const normalizedEmail = normalizeEmail(parsed.data.email);
+      if (isReservedAdminEmail(normalizedEmail)) {
+        return res.status(403).json({ error: "reserved_admin_email" });
+      }
+
+      const existing = await storage.getUserByEmail(normalizedEmail);
       if (existing) {
         return res.status(409).json({ error: "email_already_registered" });
       }
 
-      const user = await storage.createUser(parsed.data);
+      const user = await storage.createUser({ ...parsed.data, email: normalizedEmail });
       req.session.user = { id: user.id, email: user.email, role: user.role };
       await persistSession(req);
       const token = signAuthToken(req.session.user);
@@ -114,15 +128,33 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.post("/api/auth/login", async (req, res) => {
-    const parsed = authSchema.pick({ email: true, password: true }).safeParse(req.body);
+    const parsed = authSchema
+      .pick({ email: true, password: true })
+      .extend({ audience: authAudienceSchema.optional() })
+      .safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
-      const user = await storage.verifyUser(parsed.data.email, parsed.data.password);
+      const normalizedEmail = normalizeEmail(parsed.data.email);
+      const audience = parsed.data.audience ?? "user";
+
+      if (audience === "user" && isReservedAdminEmail(normalizedEmail)) {
+        return res.status(403).json({ error: "admin_login_required" });
+      }
+
+      const user = await storage.verifyUser(normalizedEmail, parsed.data.password);
       if (!user) {
         return res.status(401).json({ error: "invalid_credentials" });
+      }
+
+      if (audience === "user" && user.role === "admin") {
+        return res.status(403).json({ error: "admin_login_required" });
+      }
+
+      if (audience === "admin" && user.role !== "admin") {
+        return res.status(403).json({ error: "admin_access_required" });
       }
 
       req.session.user = { id: user.id, email: user.email, role: user.role };

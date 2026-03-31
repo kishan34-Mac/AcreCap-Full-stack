@@ -23,7 +23,7 @@ export default function AdminLogin() {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const user = await login({ email: email.trim(), password });
+      const user = await login({ email: email.trim(), password, audience: "admin" });
 
       if (user.role !== "admin") {
         await logout();
@@ -38,9 +38,15 @@ export default function AdminLogin() {
       toast({ title: "Welcome", description: "Admin login successful." });
       navigate(fromPath, { replace: true });
     } catch (error: any) {
+      const message =
+        error?.message === "admin_access_required"
+          ? "Only the configured admin account can sign in here."
+          : error?.message === "invalid_credentials"
+          ? "Invalid admin email or password."
+          : error?.message || "Unable to sign in.";
       toast({
         title: "Login failed",
-        description: error?.message || "Unable to sign in.",
+        description: message,
         variant: "destructive",
       });
     } finally {

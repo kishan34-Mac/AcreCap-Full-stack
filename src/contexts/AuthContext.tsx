@@ -11,7 +11,11 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isAdmin: boolean;
   refreshSession: () => Promise<void>;
-  login: (payload: { email: string; password: string }) => Promise<AuthUser>;
+  login: (payload: {
+    email: string;
+    password: string;
+    audience?: "user" | "admin";
+  }) => Promise<AuthUser>;
   signup: (payload: {
     name: string;
     email: string;
@@ -50,10 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       isAdmin: user?.role === "admin",
       refreshSession,
-      login: async ({ email, password }) => {
+      login: async ({ email, password, audience = "user" }) => {
         const data = await apiFetch<{ user: AuthUser; token: string }>("auth/login", {
           method: "POST",
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, audience }),
         });
         setStoredAuthToken(data.token);
         setUser(data.user);
