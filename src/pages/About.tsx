@@ -39,14 +39,14 @@ export default function About() {
         <div className="container-custom">
           <div className="max-w-3xl mx-auto text-center">
             <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-              About FinLeaf
+              About AcreCap
             </span>
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-6">
               Your Trusted Financial Partner Since{' '}
               <span className="gradient-text">2010</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              For over a decade, we've been helping businesses and individuals achieve their financial dreams through transparent, efficient, and customer-centric services.
+              For over a decade, we've been helping businesses and individuals achieve their financial goals through transparent, efficient, and customer-centric lending and insurance support.
             </p>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function About() {
               </h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  FinLeaf was founded with a simple mission: to make financial services accessible, transparent, and hassle-free for everyone. What started as a small lending firm has grown into a comprehensive financial services company.
+                  AcreCap was founded with a simple mission: to make financial services accessible, transparent, and hassle-free for everyone. What started as a focused advisory platform has grown into a broader financial services company.
                 </p>
                 <p>
                   Over the years, we've helped thousands of businesses secure funding for growth, and countless families protect their futures through our insurance solutions. Our success is built on the trust of our customers and our commitment to their success.
