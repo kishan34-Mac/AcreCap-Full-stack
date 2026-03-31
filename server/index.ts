@@ -11,8 +11,31 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (
+      allowedOrigins.includes(origin) ||
+      /\.vercel\.app$/.test(new URL(origin).hostname)
+    ) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("CORS not allowed"));
+  },
   credentials: true,
 }));
 

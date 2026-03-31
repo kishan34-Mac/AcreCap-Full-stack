@@ -60,6 +60,14 @@ const isDatabaseUnavailable = (error: unknown) => {
 };
 
 export async function registerRoutes(app: Express): Promise<void> {
+  const persistSession = (req: any) =>
+    new Promise<void>((resolve, reject) => {
+      req.session.save((error: unknown) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
   });
@@ -93,6 +101,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const user = await storage.createUser(parsed.data);
       req.session.user = { id: user.id, email: user.email, role: user.role };
+      await persistSession(req);
       return res.status(201).json({ user: serializeSessionUser(user) });
     } catch (error: any) {
       if (isDatabaseUnavailable(error)) {
@@ -115,6 +124,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       req.session.user = { id: user.id, email: user.email, role: user.role };
+      await persistSession(req);
       return res.json({ user: serializeSessionUser(user) });
     } catch (error: any) {
       if (isDatabaseUnavailable(error)) {
