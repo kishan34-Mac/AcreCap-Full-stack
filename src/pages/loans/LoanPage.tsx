@@ -433,26 +433,26 @@ export default function LoanPage() {
     <Layout>
       <section className="section-padding bg-gradient-to-br from-primary/5 via-ocean/5 to-accent/5">
         <div className="container-custom">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                 <Icon className="h-4 w-4" />
                 Loan Products
               </div>
-              <h1 className="mb-6 text-4xl font-bold text-foreground sm:text-5xl">
+              <h1 className="text-balance mb-4 text-3xl font-bold text-foreground sm:mb-6 sm:text-5xl">
                 {loan.title}
               </h1>
-              <p className="mb-8 text-lg leading-8 text-muted-foreground">
+              <p className="mb-6 text-sm leading-6 text-muted-foreground sm:mb-8 sm:text-lg sm:leading-8">
                 {loan.description}
               </p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="hero" size="lg" asChild>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                <Button variant="hero" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/apply">
                     Apply Now
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild>
+                <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/contact">Talk to Expert</Link>
                 </Button>
               </div>
@@ -478,7 +478,7 @@ export default function LoanPage() {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="glass-card flex items-center gap-4 p-6"
+                  className="glass-card flex items-center gap-4 p-5 sm:p-6"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
                     <stat.icon className="h-7 w-7 text-primary" />
@@ -487,7 +487,7 @@ export default function LoanPage() {
                     <p className="text-sm text-muted-foreground">
                       {stat.label}
                     </p>
-                    <p className="text-xl font-bold text-foreground">
+                    <p className="text-lg font-bold text-foreground sm:text-xl">
                       {stat.value}
                     </p>
                   </div>
@@ -500,8 +500,8 @@ export default function LoanPage() {
 
       <section className="section-padding">
         <div className="container-custom">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="glass-card p-8">
+          <div className="grid gap-5 md:grid-cols-3 md:gap-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 Key Features
               </h3>
@@ -517,7 +517,7 @@ export default function LoanPage() {
               </ul>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 Eligibility
               </h3>
@@ -533,7 +533,7 @@ export default function LoanPage() {
               </ul>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 Documents Required
               </h3>
@@ -554,8 +554,8 @@ export default function LoanPage() {
 
       <section className="section-padding bg-secondary/30">
         <div className="container-custom">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="glass-card p-8">
+          <div className="grid gap-5 lg:grid-cols-2 lg:gap-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-2xl font-bold text-foreground">
                 Best Use Cases
               </h3>
@@ -571,7 +571,7 @@ export default function LoanPage() {
               </div>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-2xl font-bold text-foreground">
                 Why Customers Choose AcreCap
               </h3>
@@ -598,7 +598,7 @@ export default function LoanPage() {
       <section className="section-padding">
         <div className="container-custom">
           <div className="mb-10 max-w-2xl">
-            <h2 className="mb-3 text-3xl font-bold text-foreground">
+            <h2 className="mb-3 text-2xl font-bold text-foreground sm:text-3xl">
               How the Loan Process Works
             </h2>
             <p className="text-muted-foreground">
@@ -606,9 +606,9 @@ export default function LoanPage() {
               first conversation to the final disbursal.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
             {loan.process.map((step, index) => (
-              <div key={step} className="glass-card p-6">
+              <div key={step} className="glass-card p-5 sm:p-6">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-lg font-bold text-primary">
                   {index + 1}
                 </div>
@@ -622,16 +622,16 @@ export default function LoanPage() {
       <section className="section-padding bg-secondary/30">
         <div className="container-custom">
           <div className="mb-10 max-w-2xl">
-            <h2 className="mb-3 text-3xl font-bold text-foreground">
+            <h2 className="mb-3 text-2xl font-bold text-foreground sm:text-3xl">
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground">
               A few practical questions borrowers usually ask before applying.
             </p>
           </div>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
             {loan.faq.map((item) => (
-              <div key={item.question} className="glass-card p-7">
+              <div key={item.question} className="glass-card p-5 sm:p-7">
                 <div className="mb-3 flex items-start gap-3">
                   <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                     <FileText className="h-5 w-5 text-primary" />
@@ -657,10 +657,10 @@ export default function LoanPage() {
             structure the application properly, and move faster with fewer
             surprises.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
             <Button
               size="xl"
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
               asChild
             >
               <Link to="/apply">
@@ -671,7 +671,7 @@ export default function LoanPage() {
             <Button
               size="xl"
               variant="outline"
-              className="border-white/30 bg-transparent text-white hover:bg-white/10"
+              className="w-full border-white/30 bg-transparent text-white hover:bg-white/10 sm:w-auto"
               asChild
             >
               <Link to="/contact">Talk to Expert</Link>

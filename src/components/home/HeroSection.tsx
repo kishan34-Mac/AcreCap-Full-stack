@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export const HeroSection = () => {
   return (
-    <section className="relative flex min-h-[auto] items-start overflow-hidden py-10 sm:min-h-[82svh] sm:items-center sm:py-0 lg:min-h-[90vh]">
+    <section className="relative flex min-h-[auto] items-start overflow-hidden py-8 sm:min-h-[82svh] sm:items-center sm:py-0 lg:min-h-[90vh]">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-ocean/5 to-accent/5 animate-gradient" />
       
@@ -25,7 +25,7 @@ export const HeroSection = () => {
               Trusted by 10,000+ Customers
             </div>
 
-            <h1 className="mb-4 text-[2rem] font-bold leading-[1.05] text-foreground animate-fade-up sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="text-balance mb-4 text-[1.9rem] font-bold leading-[1.08] text-foreground animate-fade-up sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
               Instant Business Loans with{' '}
               <span className="gradient-text">Minimal Documentation</span>
             </h1>
@@ -127,7 +127,7 @@ export const HeroSection = () => {
           </div>
 
           <div className="lg:hidden">
-            <div className="glass-card p-4">
+            <div className="glass-card p-4 sm:p-5">
               <div className="mb-4 flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80">
                   <TrendingUp className="h-7 w-7 text-primary-foreground" />
@@ -142,7 +142,7 @@ export const HeroSection = () => {
                 <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-primary to-success" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
                 <div className="rounded-xl bg-secondary/50 p-3">
                   <p className="text-xs text-muted-foreground">EMI/Month</p>
                   <p className="text-base font-bold text-foreground">₹1,12,500</p>

@@ -66,7 +66,7 @@ export default function Contact() {
             <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
               Get in Touch
             </span>
-            <h1 className="text-3xl sm:text-5xl font-bold text-foreground mb-4 sm:mb-6">
+            <h1 className="text-balance mb-4 text-3xl font-bold text-foreground sm:mb-6 sm:text-5xl">
               We're Here to <span className="gradient-text">Help You</span>
             </h1>
             <p className="text-sm sm:text-lg text-muted-foreground">
@@ -89,7 +89,7 @@ export default function Contact() {
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                       <info.icon className="w-6 h-6 text-primary" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="text-lg font-semibold text-foreground mb-2">
                         {info.title}
                       </h3>
@@ -104,7 +104,7 @@ export default function Contact() {
               ))}
 
               <div className="flex flex-col gap-2">
-                <Button variant="outline" className="w-full" size="lg" asChild>
+                  <Button variant="outline" className="w-full" size="lg" asChild>
                   <a
                     href="https://wa.me/919696255795?text=Hello%21%20I%20would%20like%20detailed%20information%20about%20the%20loan.%20Please%20share%20eligibility%20criteria%2C%20interest%20rates%2C%20required%20documents%2C%20tenure%20options%2C%20and%20processing%20time.%20Thank%20you."
                     target="_blank"
@@ -125,12 +125,12 @@ export default function Contact() {
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <div className="glass-card p-5 sm:p-10">
+              <div className="glass-card p-5 sm:p-8 lg:p-10">
                 <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">
                   Send us a Message
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name *</Label>
                       <Input
@@ -188,7 +188,7 @@ export default function Contact() {
                       required
                     />
                   </div>
-                  <Button type="submit" variant="accent" size="lg">
+                  <Button type="submit" variant="accent" size="lg" className="w-full sm:w-auto">
                     <Send className="w-4 h-4 mr-2" />
                     Send Message
                   </Button>
@@ -200,8 +200,8 @@ export default function Contact() {
       </section>
 
       {/* Map Section */}
-      <section className="h-96 bg-secondary">
-        <div className="w-full h-full flex items-center justify-center">
+      <section className="bg-secondary">
+        <div className="flex h-72 w-full items-center justify-center sm:h-80 md:h-96">
           <div className="text-center">
             <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">

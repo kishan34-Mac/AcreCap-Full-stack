@@ -466,26 +466,26 @@ export default function InsurancePage() {
     <Layout>
       <section className="section-padding bg-gradient-to-br from-ocean/5 via-primary/5 to-accent/5">
         <div className="container-custom">
-          <div className="grid gap-10 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center lg:gap-10">
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-ocean/10 px-4 py-2 text-sm font-medium text-ocean">
                 <ShieldCheck className="h-4 w-4" />
                 Insurance Solutions
               </div>
-              <h1 className="mb-6 text-4xl font-bold text-foreground sm:text-5xl">
+              <h1 className="text-balance mb-4 text-3xl font-bold text-foreground sm:mb-6 sm:text-5xl">
                 {insurance.title}
               </h1>
-              <p className="mb-8 text-lg leading-8 text-muted-foreground">
+              <p className="mb-6 text-sm leading-6 text-muted-foreground sm:mb-8 sm:text-lg sm:leading-8">
                 {insurance.description}
               </p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="hero" size="lg" asChild>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                <Button variant="hero" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/contact">
                     Get Quote
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild>
+                <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/contact">Talk to Expert</Link>
                 </Button>
               </div>
@@ -511,14 +511,14 @@ export default function InsurancePage() {
               ].map((card) => (
                 <div
                   key={card.label}
-                  className="glass-card flex items-center gap-4 p-6"
+                  className="glass-card flex items-center gap-4 p-5 sm:p-6"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ocean/10">
                     <card.icon className="h-7 w-7 text-ocean" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{card.label}</p>
-                    <p className="text-lg font-bold text-foreground">
+                    <p className="text-base font-bold text-foreground sm:text-lg">
                       {card.value}
                     </p>
                   </div>
@@ -541,11 +541,11 @@ export default function InsurancePage() {
                 us help match you with the right insurer and premium structure.
               </p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
               {insurance.types.map((insuranceType) => (
                 <div
                   key={insuranceType.name}
-                  className="glass-card-hover p-6 text-center"
+                  className="glass-card-hover p-5 text-center sm:p-6"
                 >
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-ocean/10">
                     <insuranceType.icon className="h-8 w-8 text-ocean" />
@@ -562,8 +562,8 @@ export default function InsurancePage() {
 
       <section className="section-padding">
         <div className="container-custom">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="glass-card p-8">
+          <div className="grid gap-5 md:grid-cols-3 md:gap-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 Key Benefits
               </h3>
@@ -579,7 +579,7 @@ export default function InsurancePage() {
               </ul>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 What's Covered
               </h3>
@@ -595,7 +595,7 @@ export default function InsurancePage() {
               </ul>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-xl font-bold text-foreground">
                 Why Choose Us
               </h3>
@@ -616,8 +616,8 @@ export default function InsurancePage() {
 
       <section className="section-padding bg-secondary/30">
         <div className="container-custom">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="glass-card p-8">
+          <div className="grid gap-5 lg:grid-cols-2 lg:gap-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-2xl font-bold text-foreground">
                 Ideal For
               </h3>
@@ -633,7 +633,7 @@ export default function InsurancePage() {
               </div>
             </div>
 
-            <div className="glass-card p-8">
+            <div className="glass-card p-5 sm:p-6 lg:p-8">
               <h3 className="mb-6 text-2xl font-bold text-foreground">
                 Common Exclusions
               </h3>
@@ -655,7 +655,7 @@ export default function InsurancePage() {
       <section className="section-padding">
         <div className="container-custom">
           <div className="mb-10 max-w-2xl">
-            <h2 className="mb-3 text-3xl font-bold text-foreground">
+            <h2 className="mb-3 text-2xl font-bold text-foreground sm:text-3xl">
               How We Help You Get Covered
             </h2>
             <p className="text-muted-foreground">
@@ -663,9 +663,9 @@ export default function InsurancePage() {
               you get the right protection without confusing paperwork.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
             {insurance.process.map((step, index) => (
-              <div key={step} className="glass-card p-6">
+              <div key={step} className="glass-card p-5 sm:p-6">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-lg font-bold text-primary">
                   {index + 1}
                 </div>
@@ -679,16 +679,16 @@ export default function InsurancePage() {
       <section className="section-padding bg-secondary/30">
         <div className="container-custom">
           <div className="mb-10 max-w-2xl">
-            <h2 className="mb-3 text-3xl font-bold text-foreground">
+            <h2 className="mb-3 text-2xl font-bold text-foreground sm:text-3xl">
               Frequently Asked Questions
             </h2>
             <p className="text-muted-foreground">
               Common questions customers ask before choosing a policy.
             </p>
           </div>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
             {insurance.faq.map((item) => (
-              <div key={item.question} className="glass-card p-7">
+              <div key={item.question} className="glass-card p-5 sm:p-7">
                 <div className="mb-3 flex items-start gap-3">
                   <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-ocean/10">
                     <FileText className="h-5 w-5 text-ocean" />
@@ -713,10 +713,10 @@ export default function InsurancePage() {
             Tell us your need and we will help compare insurers, explain
             coverage, and guide you toward the best-fit protection plan.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
             <Button
               size="xl"
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
               asChild
             >
               <Link to="/contact">
@@ -727,7 +727,7 @@ export default function InsurancePage() {
             <Button
               size="xl"
               variant="outline"
-              className="border-white/30 bg-transparent text-white hover:bg-white/10"
+              className="w-full border-white/30 bg-transparent text-white hover:bg-white/10 sm:w-auto"
               asChild
             >
               <Link to="/about">Why Choose AcreCap</Link>
