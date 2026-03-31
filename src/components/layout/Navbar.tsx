@@ -83,6 +83,8 @@ export const Navbar = () => {
       : { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }
     : { label: "Admin", href: "/admin/login", icon: Shield };
 
+  const adminLink = isAdmin ? "/admin" : "/admin/login";
+
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/50 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
       <div className="container-custom">
@@ -228,9 +230,17 @@ export const Navbar = () => {
                   </Link>
                 </Button>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link to={actionLink.href}>{actionLink.label}</Link>
+                  <Link to={adminLink}>Admin</Link>
                 </Button>
               </div>
+
+              {isAuthenticated && !isAdmin && (
+                <div className="mb-3">
+                  <Button variant="secondary" className="w-full" asChild>
+                    <Link to={actionLink.href}>{actionLink.label}</Link>
+                  </Button>
+                </div>
+              )}
 
               <div className="grid gap-1">
                 {primaryLinks.map((item) => (
