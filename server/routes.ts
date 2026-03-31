@@ -47,6 +47,18 @@ const serializeSessionUser = (user: Awaited<ReturnType<typeof storage.getUser>>)
       }
     : null;
 
+const isDatabaseUnavailable = (error: unknown) => {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes("mongoose") ||
+    message.includes("mongo") ||
+    message.includes("server selection") ||
+    message.includes("buffering timed out") ||
+    message.includes("topology")
+  );
+};
+
 export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
@@ -83,6 +95,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       req.session.user = { id: user.id, email: user.email, role: user.role };
       return res.status(201).json({ user: serializeSessionUser(user) });
     } catch (error: any) {
+      if (isDatabaseUnavailable(error)) {
+        return res.status(503).json({ error: "database_unavailable" });
+      }
       return res.status(500).json({ error: error.message });
     }
   });
@@ -102,6 +117,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       req.session.user = { id: user.id, email: user.email, role: user.role };
       return res.json({ user: serializeSessionUser(user) });
     } catch (error: any) {
+      if (isDatabaseUnavailable(error)) {
+        return res.status(503).json({ error: "database_unavailable" });
+      }
       return res.status(500).json({ error: error.message });
     }
   });

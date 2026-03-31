@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import { connectMongo } from "./mongo";
 
 const userSchema = new Schema(
   {
@@ -9,7 +10,7 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
   },
-  { timestamps: true }
+  { timestamps: true, bufferCommands: false }
 );
 
 const submissionSchema = new Schema(
@@ -30,7 +31,7 @@ const submissionSchema = new Schema(
     gstNumber: { type: String, default: null },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   },
-  { timestamps: true }
+  { timestamps: true, bufferCommands: false }
 );
 
 const activityLogSchema = new Schema(
@@ -39,7 +40,7 @@ const activityLogSchema = new Schema(
     action: { type: String, required: true, trim: true },
     data: { type: Schema.Types.Mixed, default: {} },
   },
-  { timestamps: true }
+  { timestamps: true, bufferCommands: false }
 );
 
 type UserDocument = InferSchemaType<typeof userSchema>;
@@ -189,7 +190,12 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private async ensureReady(): Promise<void> {
+    await connectMongo();
+  }
+
   async ensureAdminUser(): Promise<void> {
+    await this.ensureReady();
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
     const adminPassword = process.env.ADMIN_PASSWORD?.trim();
 
@@ -216,21 +222,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUser(id: string): Promise<User | null> {
+    await this.ensureReady();
     const user = await UserModel.findById(id);
     return user ? serializeUser(user) : null;
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
+    await this.ensureReady();
     const user = await UserModel.findOne({ email: email.toLowerCase() });
     return user ? serializeUser(user) : null;
   }
 
   async getUsers(): Promise<User[]> {
+    await this.ensureReady();
     const users = await UserModel.find().sort({ email: 1 });
     return users.map(serializeUser);
   }
 
   async createUser(user: CreateUserInput): Promise<User> {
+    await this.ensureReady();
     const passwordHash = await bcrypt.hash(user.password, 10);
     const created = await UserModel.create({
       name: user.name.trim(),
@@ -243,6 +253,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: UpdateUserInput): Promise<User | null> {
+    await this.ensureReady();
     const updated = await UserModel.findByIdAndUpdate(
       id,
       {
@@ -256,6 +267,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async verifyUser(email: string, password: string): Promise<User | null> {
+    await this.ensureReady();
     const user = await UserModel.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return null;
@@ -266,21 +278,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSubmissions(): Promise<Submission[]> {
+    await this.ensureReady();
     const rows = await SubmissionModel.find().sort({ createdAt: -1 });
     return rows.map(serializeSubmission);
   }
 
   async getSubmissionsByUser(userId: string): Promise<Submission[]> {
+    await this.ensureReady();
     const rows = await SubmissionModel.find({ userId }).sort({ createdAt: -1 });
     return rows.map(serializeSubmission);
   }
 
   async getSubmission(id: string): Promise<Submission | null> {
+    await this.ensureReady();
     const submission = await SubmissionModel.findById(id);
     return submission ? serializeSubmission(submission) : null;
   }
 
   async createSubmission(submission: CreateSubmissionInput): Promise<Submission> {
+    await this.ensureReady();
     const created = await SubmissionModel.create({
       ...submission,
       userId: submission.userId || null,
@@ -292,6 +308,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSubmissionStatus(id: string, status: Submission["status"]): Promise<Submission | null> {
+    await this.ensureReady();
     const updated = await SubmissionModel.findByIdAndUpdate(
       id,
       { status },
@@ -301,6 +318,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createActivityLog(log: CreateActivityLogInput): Promise<ActivityLog> {
+    await this.ensureReady();
     const created = await ActivityLogModel.create({
       userId: log.userId || null,
       action: log.action,
@@ -310,6 +328,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActivityLogs(): Promise<ActivityLog[]> {
+    await this.ensureReady();
     const rows = await ActivityLogModel.find().sort({ createdAt: -1 });
     return rows.map(serializeActivityLog);
   }
