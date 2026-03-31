@@ -118,9 +118,9 @@ export default function Dashboard() {
     <Layout>
       <section className="section-padding">
         <div className="container-custom">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold">My Dashboard</h1>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button variant="accent" asChild>
                 <Link to="/apply">New Application</Link>
               </Button>
@@ -130,7 +130,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-card p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
             <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={(e) => setSearch(e.target.value)} />
             <select className="border border-border rounded-md bg-background p-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
               <option value="all">All</option>
@@ -143,7 +143,7 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          <div className="glass-card p-0 overflow-x-auto">
+          <div className="hidden overflow-x-auto glass-card p-0 md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b border-border">
@@ -175,6 +175,37 @@ export default function Dashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="grid gap-4 md:hidden">
+            {filtered.map((row) => (
+              <div key={row.id} className="glass-card p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-foreground">{row.businessName}</h3>
+                    <p className="text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`inline-block rounded px-2 py-1 text-xs ${row.status === "approved" ? "bg-success/20 text-success" : row.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                    {row.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="text-foreground">{row.loanAmount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">City</p>
+                    <p className="text-foreground">{row.city}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="glass-card p-4 text-center text-muted-foreground">
+                No submissions found
+              </div>
+            )}
           </div>
         </div>
       </section>

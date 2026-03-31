@@ -197,21 +197,22 @@ export default function Apply() {
       <section className="section-padding">
         <div className="container-custom">
           <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-8 sm:mb-12">
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">Apply for a Loan</h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-sm sm:text-lg text-muted-foreground">
                 Fill in your details below. It only takes a few minutes.
               </p>
             </div>
 
-            <div className="flex items-center justify-between mb-12">
+            <div className="mb-8 overflow-x-auto pb-2 sm:mb-12">
+              <div className="flex min-w-[640px] items-center justify-between">
               {steps.map((step, index) => (
                 <div key={step.id} className="flex items-center">
                   <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${currentStep >= step.id ? "bg-primary text-primary-foreground shadow-glow" : "bg-secondary text-muted-foreground"}`}>
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all ${currentStep >= step.id ? "bg-primary text-primary-foreground shadow-glow" : "bg-secondary text-muted-foreground"}`}>
                       {currentStep > step.id ? <Check className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                     </div>
-                    <span className={`text-xs mt-2 hidden sm:block ${currentStep >= step.id ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                    <span className={`mt-2 text-[11px] sm:text-xs ${currentStep >= step.id ? "text-primary font-medium" : "text-muted-foreground"}`}>
                       {step.title}
                     </span>
                   </div>
@@ -221,12 +222,13 @@ export default function Apply() {
                 </div>
               ))}
             </div>
+            </div>
 
-            <div className="glass-card p-6 sm:p-10">
+            <div className="glass-card p-5 sm:p-10">
               {currentStep === 1 && (
                 <div className="space-y-6 animate-fade-in">
                   <h2 className="text-xl font-semibold text-foreground mb-6">Personal Information</h2>
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                     {[
                       ["name", "Full Name *", "Enter your full name"],
                       ["mobile", "Mobile Number *", "+91 98765 43210"],
@@ -246,7 +248,7 @@ export default function Apply() {
               {currentStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
                   <h2 className="text-xl font-semibold text-foreground mb-6">Business Information</h2>
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                     {[
                       ["businessName", "Business Name *", "Enter business name"],
                       ["businessType", "Business Type *", "Retail, Trading, Manufacturing"],
@@ -266,7 +268,7 @@ export default function Apply() {
               {currentStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
                   <h2 className="text-xl font-semibold text-foreground mb-6">Loan Details</h2>
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                     {[
                       ["loanAmount", "Loan Amount Required *", "Enter required amount"],
                       ["tenure", "Preferred Tenure *", "e.g. 24 months"],
@@ -285,7 +287,7 @@ export default function Apply() {
               {currentStep === 4 && (
                 <div className="space-y-6 animate-fade-in">
                   <h2 className="text-xl font-semibold text-foreground mb-6">Documents</h2>
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                     {[
                       ["panNumber", "PAN Number", "ABCDE1234F"],
                       ["gstNumber", "GST Number", "22ABCDE1234F1Z5"],
@@ -300,12 +302,12 @@ export default function Apply() {
                 </div>
               )}
 
-              <div className="flex justify-between mt-10 gap-4">
-                <Button variant="outline" onClick={handlePrev} disabled={currentStep === 1 || submitting}>
+              <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:justify-between sm:gap-4">
+                <Button className="w-full sm:w-auto" variant="outline" onClick={handlePrev} disabled={currentStep === 1 || submitting}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Previous
                 </Button>
-                <Button variant="accent" onClick={() => void handleNext()} disabled={submitting}>
+                <Button className="w-full sm:w-auto" variant="accent" onClick={() => void handleNext()} disabled={submitting}>
                   {currentStep === 4 ? (submitting ? "Submitting..." : "Submit Application") : "Next"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>

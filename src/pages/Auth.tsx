@@ -82,9 +82,9 @@ export default function Auth() {
 
   return (
     <Layout>
-      <section className="min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4">
+      <section className="min-h-[calc(100vh-4rem)] flex items-start justify-center px-4 py-8 sm:min-h-[calc(100vh-5rem)] sm:items-center sm:py-12">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <Link to="/" className="inline-flex items-center gap-2 group">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-glow">
                 <Leaf className="w-6 h-6 text-primary-foreground" />
@@ -93,17 +93,17 @@ export default function Auth() {
             </Link>
           </div>
 
-          <div className="glass-card rounded-3xl p-8">
-            <div className="flex rounded-xl bg-secondary p-1 mb-8">
+          <div className="glass-card rounded-3xl p-5 sm:p-8">
+            <div className="mb-6 flex rounded-xl bg-secondary p-1 sm:mb-8">
               <button
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${isLogin ? "bg-background text-foreground shadow-soft" : "text-muted-foreground"}`}
+                className={`flex-1 rounded-lg px-3 py-3 text-sm font-semibold transition-colors sm:px-4 sm:text-base ${isLogin ? "bg-background text-foreground shadow-soft" : "text-muted-foreground"}`}
               >
                 Login
               </button>
               <button
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${!isLogin ? "bg-background text-foreground shadow-soft" : "text-muted-foreground"}`}
+                className={`flex-1 rounded-lg px-3 py-3 text-sm font-semibold transition-colors sm:px-4 sm:text-base ${!isLogin ? "bg-background text-foreground shadow-soft" : "text-muted-foreground"}`}
               >
                 Sign Up
               </button>

@@ -232,9 +232,9 @@ export default function Admin() {
     <Layout>
       <section className="section-padding">
         <div className="container-custom">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold">Admin Panel</h1>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Button variant="secondary" asChild>
                 <Link to="/admin/users">Manage Users</Link>
               </Button>
@@ -247,7 +247,7 @@ export default function Admin() {
             </div>
           </div>
 
-          <div className="glass-card p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
             <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={(e) => setSearch(e.target.value)} />
             <select className="border border-border rounded-md bg-background p-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
               <option value="all">All</option>
@@ -260,7 +260,7 @@ export default function Admin() {
             </Button>
           </div>
 
-          <div className="glass-card p-0 overflow-x-auto">
+          <div className="hidden overflow-x-auto glass-card p-0 md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b border-border">
@@ -313,6 +313,59 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="grid gap-4 md:hidden">
+            {filtered.map((r) => (
+              <div key={r.id} className="glass-card p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-foreground">{r.name}</h3>
+                    <p className="text-xs text-muted-foreground">{r.email}</p>
+                  </div>
+                  <span className={`inline-block rounded px-2 py-1 text-xs ${r.status === "approved" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                    {r.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Created</p>
+                    <p className="text-foreground">{new Date(r.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="text-foreground">{r.loanAmount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Mobile</p>
+                    <p className="text-foreground">{r.mobile}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">City</p>
+                    <p className="text-foreground">{r.city}</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
+                    View
+                  </Button>
+                  <Button size="sm" variant="accent" onClick={() => void updateStatus(r.id, "approved")}>
+                    Accept
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => void updateStatus(r.id, "rejected")}>
+                    Reject
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => void updateStatus(r.id, "pending")}>
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="glass-card p-4 text-center text-muted-foreground">
+                No submissions found
+              </div>
+            )}
           </div>
 
           <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>

@@ -66,10 +66,10 @@ export default function Contact() {
             <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
               Get in Touch
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-6">
+            <h1 className="text-3xl sm:text-5xl font-bold text-foreground mb-4 sm:mb-6">
               We're Here to <span className="gradient-text">Help You</span>
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-sm sm:text-lg text-muted-foreground">
               Have questions about our services? Our team is ready to assist
               you. Reach out to us through any of the channels below.
             </p>
@@ -80,13 +80,13 @@ export default function Contact() {
       {/* Contact Section */}
       <section className="section-padding">
         <div className="container-custom">
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             {/* Contact Info */}
             <div className="space-y-6">
               {contactInfo.map((info, i) => (
-                <div key={i} className="glass-card p-6">
+                <div key={i} className="glass-card p-5 sm:p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                       <info.icon className="w-6 h-6 text-primary" />
                     </div>
                     <div>
@@ -125,8 +125,8 @@ export default function Contact() {
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <div className="glass-card p-6 sm:p-10">
-                <h2 className="text-2xl font-bold text-foreground mb-6">
+              <div className="glass-card p-5 sm:p-10">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-6">
                   Send us a Message
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
