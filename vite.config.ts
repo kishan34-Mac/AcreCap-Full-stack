@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    outDir: "dist/public",
+    outDir: "dist",
     sourcemap: mode === "development",
     rollupOptions: {
       output: {
