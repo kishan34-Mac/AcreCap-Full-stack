@@ -1,101 +1,14 @@
-import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
 }
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL as string | undefined;
-
 export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) => {
   const location = useLocation();
-
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-
-    const check = async () => {
-      setLoading(true);
-
-      if (!isSupabaseConfigured) {
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-
-      const token = session?.access_token ?? null;
-      const authed = !!session?.user;
-
-      if (!alive) return;
-
-      setIsAuthenticated(authed);
-
-      if (!authed || !requireAdmin) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      if (!BACKEND || !token) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch(`${BACKEND}/api/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (!alive) return;
-
-        if (res.status === 401) {
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-
-        const json = await res.json().catch(() => ({}));
-        if (!alive) return;
-
-        setIsAdmin(json?.profile?.role === "admin");
-      } catch {
-        if (!alive) return;
-        setIsAdmin(false);
-      } finally {
-        if (alive) {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (!isSupabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      check();
-    });
-
-    check();
-
-    return () => {
-      alive = false;
-      subscription.unsubscribe();
-    };
-  }, [requireAdmin]);
+  const { loading, isAuthenticated, isAdmin } = useAuth();
 
   if (loading) {
     return (

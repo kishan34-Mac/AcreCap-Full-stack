@@ -47,11 +47,12 @@ AcreCap is a business loans and insurance application originally built with Lova
 
 ## Environment Variables Required
 - `DATABASE_URL` - Neon PostgreSQL connection string (auto-configured)
-- `VITE_SUPABASE_URL` - Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for backend auth validation)
-- `VITE_ADMIN_EMAILS` - Comma-separated admin email addresses
-- `ADMIN_EMAILS` - Server-side admin email list (same as VITE_ADMIN_EMAILS)
+- `MONGODB_URI` - MongoDB connection string
+- `MONGODB_DB` - Optional MongoDB database name
+- `SESSION_SECRET` - Secret used to sign session cookies
+- `ADMIN_EMAIL` - Admin account email used for the seeded admin login
+- `ADMIN_PASSWORD` - Admin account password used for the seeded admin login
+- `ADMIN_NAME` - Optional admin display name
 - `VITE_BACKEND_URL` - Backend API URL (optional, defaults to same origin)
 
 ## Recent Changes (Dec 2024)
