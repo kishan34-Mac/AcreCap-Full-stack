@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   apiFetch,
+  getStoredAuthToken,
+  getStoredAuthUser,
   setStoredAuthToken,
+  setStoredAuthUser,
   type AuthUser,
 } from "@/lib/api";
 
@@ -27,8 +30,8 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredAuthUser());
+  const [loading, setLoading] = useState(() => !getStoredAuthUser());
 
   const refreshSession = async () => {
     try {
@@ -36,8 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "GET",
       });
       setUser(data.user);
+      setStoredAuthUser(data.user);
     } catch {
-      setUser(null);
+      if (!getStoredAuthToken()) {
+        setUser(null);
+        setStoredAuthUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -60,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ email, password, audience }),
         });
         setStoredAuthToken(data.token);
+        setStoredAuthUser(data.user);
         setUser(data.user);
         return data.user;
       },
@@ -69,12 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ name, email, password }),
         });
         setStoredAuthToken(data.token);
+        setStoredAuthUser(data.user);
         setUser(data.user);
         return data.user;
       },
       logout: async () => {
         await apiFetch("auth/logout", { method: "POST" });
         setStoredAuthToken(null);
+        setStoredAuthUser(null);
         setUser(null);
       },
     }),

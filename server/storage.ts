@@ -223,19 +223,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUser(id: string): Promise<User | null> {
     await this.ensureReady();
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findById(id).lean();
     return user ? serializeUser(user) : null;
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
     await this.ensureReady();
-    const user = await UserModel.findOne({ email: email.toLowerCase() });
+    const user = await UserModel.findOne({ email: email.toLowerCase() }).lean();
     return user ? serializeUser(user) : null;
   }
 
   async getUsers(): Promise<User[]> {
     await this.ensureReady();
-    const users = await UserModel.find().sort({ email: 1 });
+    const users = await UserModel.find().sort({ email: 1 }).lean();
     return users.map(serializeUser);
   }
 
@@ -268,7 +268,7 @@ export class DatabaseStorage implements IStorage {
 
   async verifyUser(email: string, password: string): Promise<User | null> {
     await this.ensureReady();
-    const user = await UserModel.findOne({ email: email.trim().toLowerCase() });
+    const user = await UserModel.findOne({ email: email.trim().toLowerCase() }).lean();
     if (!user) {
       return null;
     }

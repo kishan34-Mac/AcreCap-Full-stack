@@ -78,6 +78,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
     });
 
+  const persistSessionInBackground = (req: any) => {
+    void persistSession(req).catch((error) => {
+      console.error("Session save failed:", error);
+    });
+  };
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
   });
@@ -116,8 +122,8 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       const user = await storage.createUser({ ...parsed.data, email: normalizedEmail });
       req.session.user = { id: user.id, email: user.email, role: user.role };
-      await persistSession(req);
       const token = signAuthToken(req.session.user);
+      persistSessionInBackground(req);
       return res.status(201).json({ user: serializeSessionUser(user), token });
     } catch (error: any) {
       if (isDatabaseUnavailable(error)) {
@@ -158,8 +164,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       req.session.user = { id: user.id, email: user.email, role: user.role };
-      await persistSession(req);
       const token = signAuthToken(req.session.user);
+      persistSessionInBackground(req);
       return res.json({ user: serializeSessionUser(user), token });
     } catch (error: any) {
       if (isDatabaseUnavailable(error)) {

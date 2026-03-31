@@ -33,6 +33,7 @@ export interface UserProfile extends AuthUser {
 }
 
 const AUTH_TOKEN_KEY = "acrecap.auth.token";
+const AUTH_USER_KEY = "acrecap.auth.user";
 
 const rawBase =
   (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim() || "";
@@ -57,6 +58,27 @@ export function setStoredAuthToken(token: string | null) {
       localStorage.setItem(AUTH_TOKEN_KEY, token);
     } else {
       localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function getStoredAuthUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuthUser(user: AuthUser | null) {
+  try {
+    if (user) {
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(AUTH_USER_KEY);
     }
   } catch {
     // ignore storage errors
