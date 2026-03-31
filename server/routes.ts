@@ -48,8 +48,6 @@ const serializeSessionUser = (user: Awaited<ReturnType<typeof storage.getUser>>)
     : null;
 
 export async function registerRoutes(app: Express): Promise<void> {
-  await storage.ensureAdminUser();
-
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
   });

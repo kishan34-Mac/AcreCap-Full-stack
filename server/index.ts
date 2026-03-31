@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { authMiddleware, sessionMiddleware } from "./auth";
 import { connectMongo } from "./mongo";
+import { storage } from "./storage";
 
 const app = express();
 
@@ -56,7 +57,6 @@ app.get("/healthz", (_req, res) => {
 });
 
 (async () => {
-  await connectMongo();
   await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -73,6 +73,16 @@ app.get("/healthz", (_req, res) => {
   }, () => {
     log(`Server running on port ${process.env.PORT || 5000}`);
   });
+
+  connectMongo()
+    .then(async () => {
+      log("MongoDB connected");
+      await storage.ensureAdminUser();
+      log("Admin user ensured");
+    })
+    .catch((error) => {
+      console.error("MongoDB startup failed:", error);
+    });
 
   if (app.get("env") === "development") {
     await setupVite(app, server);
