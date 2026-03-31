@@ -39,45 +39,45 @@ export const TrustSection = () => {
     <section className="section-padding">
       <div className="container-custom">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
           <span className="inline-block px-4 py-2 rounded-full bg-success/10 text-success text-sm font-medium mb-4">
             Why Choose Us
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
             Trusted by Thousands of{' '}
             <span className="gradient-text">Businesses</span>
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm sm:text-lg text-muted-foreground">
             We've helped thousands of businesses and individuals achieve their financial goals with our transparent and efficient services.
           </p>
         </div>
 
         {/* Trust Factors Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 mb-12 sm:mb-16">
           {trustFactors.map((factor, i) => (
             <div
               key={i}
-              className="glass-card-hover p-6 text-center group"
+              className="glass-card-hover p-5 sm:p-6 text-center group"
             >
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <factor.icon className="w-8 h-8 text-primary" />
+                <factor.icon className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <div className="text-3xl font-bold text-primary mb-2">{factor.stat}</div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{factor.title}</h3>
+              <div className="text-2xl sm:text-3xl font-bold text-primary mb-2">{factor.stat}</div>
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{factor.title}</h3>
               <p className="text-sm text-muted-foreground">{factor.description}</p>
             </div>
           ))}
         </div>
 
         {/* Achievements Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-primary/90 to-primary/80 p-8 md:p-12">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-primary/90 to-primary/80 p-6 sm:p-8 md:p-12">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] bg-[size:2rem_2rem]" />
           </div>
 
           <div className="relative z-10">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 gap-6 sm:gap-8 lg:grid-cols-4">
               {achievements.map((achievement, i) => (
                 <div key={i} className="text-center">
                   <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-foreground mb-2">
@@ -91,7 +91,7 @@ export const TrustSection = () => {
         </div>
 
         {/* Features List */}
-        <div className="mt-16 grid md:grid-cols-2 gap-8">
+        <div className="mt-12 sm:mt-16 grid gap-8 md:grid-cols-2">
           <div className="space-y-4">
             <h3 className="text-2xl font-bold text-foreground mb-6">What Sets Us Apart</h3>
             {[

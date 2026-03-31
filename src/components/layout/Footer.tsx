@@ -12,21 +12,21 @@ import {
 export const Footer = () => {
   return (
     <footer className="bg-secondary/50 border-t border-border/50">
-      <div className="container-custom py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div className="container-custom py-12 sm:py-16">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4 sm:gap-10">
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-soft">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">AcreCap</span>
+              <span className="text-lg sm:text-xl font-bold text-foreground">AcreCap</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted partner for loans and insurance. Fast approvals, best
               rates, and expert guidance for all your financial needs.
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {[Facebook, Twitter, Linkedin, Instagram].map((Icon, i) => (
                 <a
                   key={i}
@@ -154,12 +154,12 @@ export const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-border/50">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} FinLeaf. All rights reserved.
+        <div className="mt-10 sm:mt-12 pt-8 border-t border-border/50">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-center md:text-left text-sm text-muted-foreground">
+              © {new Date().getFullYear()} AcreCap. All rights reserved.
             </p>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:justify-end">
               <Link
                 to="/privacy"
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
