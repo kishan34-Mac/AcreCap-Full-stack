@@ -68,10 +68,10 @@ app.get("/healthz", (_req, res) => {
   });
 
   const server = app.listen({
-    port: 5000,
+    port: Number(process.env.PORT || 5000),
     host: "0.0.0.0",
   }, () => {
-    log(`Server running on port 5000`);
+    log(`Server running on port ${process.env.PORT || 5000}`);
   });
 
   if (app.get("env") === "development") {
