@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { authMiddleware, sessionMiddleware } from "./auth";
@@ -10,6 +12,7 @@ import { storage } from "./storage";
 const app = express();
 
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
@@ -38,6 +41,32 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+  })
+);
+
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+app.use(
+  "/api/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));

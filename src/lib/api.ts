@@ -32,6 +32,8 @@ export interface UserProfile extends AuthUser {
   updatedAt: string;
 }
 
+const AUTH_TOKEN_KEY = "acrecap.auth.token";
+
 const rawBase =
   (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim() || "";
 const baseNoSlash = rawBase.replace(/\/+$/, "");
@@ -41,14 +43,36 @@ export const API_BASE = baseNoSlash
     : `${baseNoSlash}/api`
   : "/api";
 
+export function getStoredAuthToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAuthToken(token: string | null) {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit
 ): Promise<T> {
+  const token = getStoredAuthToken();
   const response = await fetch(`${API_BASE}/${path.replace(/^\/+/, "")}`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers || {}),
     },
     ...init,

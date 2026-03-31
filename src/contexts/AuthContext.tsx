@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { apiFetch, type AuthUser } from "@/lib/api";
+import {
+  apiFetch,
+  setStoredAuthToken,
+  type AuthUser,
+} from "@/lib/api";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -47,23 +51,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin: user?.role === "admin",
       refreshSession,
       login: async ({ email, password }) => {
-        const data = await apiFetch<{ user: AuthUser }>("auth/login", {
+        const data = await apiFetch<{ user: AuthUser; token: string }>("auth/login", {
           method: "POST",
           body: JSON.stringify({ email, password }),
         });
+        setStoredAuthToken(data.token);
         setUser(data.user);
         return data.user;
       },
       signup: async ({ name, email, password }) => {
-        const data = await apiFetch<{ user: AuthUser }>("auth/signup", {
+        const data = await apiFetch<{ user: AuthUser; token: string }>("auth/signup", {
           method: "POST",
           body: JSON.stringify({ name, email, password }),
         });
+        setStoredAuthToken(data.token);
         setUser(data.user);
         return data.user;
       },
       logout: async () => {
         await apiFetch("auth/logout", { method: "POST" });
+        setStoredAuthToken(null);
         setUser(null);
       },
     }),

@@ -41,6 +41,13 @@ const escapeCsv = (v: any) => {
   return needsQuote ? `"${escaped}"` : escaped;
 };
 
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 export default function Admin() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Submission[]>([]);
@@ -113,6 +120,62 @@ export default function Admin() {
     URL.revokeObjectURL(url);
   };
 
+  const exportExcel = () => {
+    const rowsHtml = rows
+      .map(
+        (r) => `
+          <tr>
+            <td>${escapeHtml(r.id)}</td>
+            <td>${escapeHtml(r.createdAt)}</td>
+            <td>${escapeHtml(r.status)}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.mobile)}</td>
+            <td>${escapeHtml(r.email)}</td>
+            <td>${escapeHtml(r.city)}</td>
+            <td>${escapeHtml(r.businessName)}</td>
+            <td>${escapeHtml(r.businessType)}</td>
+            <td>${escapeHtml(r.annualTurnover)}</td>
+            <td>${escapeHtml(r.yearsInBusiness)}</td>
+            <td>${escapeHtml(r.loanAmount)}</td>
+            <td>${escapeHtml(r.loanPurpose)}</td>
+            <td>${escapeHtml(r.tenure)}</td>
+            <td>${escapeHtml(r.panNumber ?? "")}</td>
+            <td>${escapeHtml(r.gstNumber ?? "")}</td>
+            <td>${escapeHtml(r.userId ?? "")}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const worksheet = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head>
+          <meta charset="UTF-8" />
+        </head>
+        <body>
+          <table>
+            <thead>
+              <tr>${CSV_HEADERS.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([worksheet], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `submissions_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const updateStatus = async (id: string, status: Submission["status"]) => {
     try {
       const { submission } = await apiFetch<{ submission: Submission }>(`submissions/${id}`, {
@@ -175,8 +238,11 @@ export default function Admin() {
               <Button variant="secondary" asChild>
                 <Link to="/admin/users">Manage Users</Link>
               </Button>
+              <Button variant="outline" onClick={exportExcel}>
+                Export Excel
+              </Button>
               <Button variant="accent" onClick={exportCsv}>
-                Export Data
+                Export CSV
               </Button>
             </div>
           </div>
