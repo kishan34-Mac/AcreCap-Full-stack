@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
 import { connectMongo } from "./mongo";
 
@@ -9,6 +10,8 @@ const userSchema = new Schema(
     phone: { type: String, trim: true, default: "" },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpiresAt: { type: Date, default: null },
   },
   { timestamps: true, bufferCommands: false }
 );
@@ -218,6 +221,8 @@ export interface IStorage {
   createUser(user: CreateUserInput): Promise<User>;
   updateUser(id: string, updates: UpdateUserInput): Promise<User | null>;
   verifyUser(email: string, password: string): Promise<User | null>;
+  createPasswordResetToken(email: string): Promise<{ user: User; token: string } | null>;
+  resetPasswordWithToken(token: string, password: string): Promise<User | null>;
   getSubmissions(): Promise<Submission[]>;
   getSubmissionsByUser(userId: string): Promise<Submission[]>;
   getSubmission(id: string): Promise<Submission | null>;
@@ -230,6 +235,10 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   private async ensureReady(): Promise<void> {
     await connectMongo();
+  }
+
+  private hashResetToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
   }
 
   async ensureAdminUser(): Promise<void> {
@@ -313,6 +322,42 @@ export class DatabaseStorage implements IStorage {
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     return isValid ? serializeUser(user) : null;
+  }
+
+  async createPasswordResetToken(email: string): Promise<{ user: User; token: string } | null> {
+    await this.ensureReady();
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await UserModel.findOne({ email: normalizedEmail });
+    if (!user) {
+      return null;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordTokenHash = this.hashResetToken(token);
+    user.resetPasswordExpiresAt = new Date(Date.now() + 1000 * 60 * 30);
+    await user.save();
+
+    return { user: serializeUser(user), token };
+  }
+
+  async resetPasswordWithToken(token: string, password: string): Promise<User | null> {
+    await this.ensureReady();
+    const tokenHash = this.hashResetToken(token);
+    const user = await UserModel.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpiresAt: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    user.passwordHash = await bcrypt.hash(password, 10);
+    user.resetPasswordTokenHash = null;
+    user.resetPasswordExpiresAt = null;
+    await user.save();
+
+    return serializeUser(user);
   }
 
   async getSubmissions(): Promise<Submission[]> {

@@ -79,6 +79,12 @@ export default function AdminLogin() {
                 {loading ? "Signing in..." : "Login"}
               </Button>
 
+              <div className="text-center text-sm">
+                <Link to="/forgot-password?audience=admin" className="text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+
               <div className="text-center text-sm text-muted-foreground">
                 <span>Not an admin?</span>{" "}
                 <Link to="/auth" className="text-primary hover:underline">

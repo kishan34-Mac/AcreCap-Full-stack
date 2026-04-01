@@ -155,6 +155,14 @@ export default function Auth() {
               <Button className="w-full" type="submit" disabled={isLoading}>
                 {isLoading ? "Please wait..." : isLogin ? "Login" : "Create Account"}
               </Button>
+
+              {isLogin && (
+                <div className="text-center text-sm">
+                  <Link to="/forgot-password" className="text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
             </form>
           </div>
         </div>

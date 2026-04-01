@@ -3,7 +3,6 @@ import { Layout } from "@/components/layout/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -341,9 +340,6 @@ export default function Admin() {
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold">Admin Panel</h1>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button variant="secondary" asChild>
-                <Link to="/admin/users">Manage Users</Link>
-              </Button>
               <Button variant="outline" onClick={exportExcel}>
                 Export Excel
               </Button>

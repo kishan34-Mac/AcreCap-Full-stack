@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
 import { signAuthToken } from "./auth";
@@ -21,6 +22,14 @@ const authSchema = z.object({
 });
 
 const authAudienceSchema = z.enum(["user", "admin"]).default("user");
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().email().max(160),
+  audience: authAudienceSchema.optional(),
+});
+const resetPasswordSchema = z.object({
+  token: z.string().min(20).max(500),
+  password: z.string().min(6).max(200),
+});
 
 const submissionBaseSchema = z.object({
   applicationType: z.enum(["loan", "insurance"]),
@@ -90,6 +99,75 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const isReservedAdminEmail = (email: string) => {
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   return !!adminEmail && normalizeEmail(email) === adminEmail;
+};
+
+const getAppBaseUrl = () =>
+  process.env.FRONTEND_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  "http://localhost:5173";
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const sendPasswordResetEmail = async ({
+  email,
+  name,
+  link,
+  audience,
+}: {
+  email: string;
+  name: string;
+  link: string;
+  audience: "user" | "admin";
+}) => {
+  const webhook = process.env.PASSWORD_RESET_EMAIL_WEBHOOK_URL?.trim();
+  if (!webhook) {
+    console.log(`Password reset link for ${email}: ${link}`);
+    return;
+  }
+
+  const safeName = escapeHtml(name || "there");
+  const safeLink = escapeHtml(link);
+  const subject =
+    audience === "admin" ? "Reset your admin password" : "Reset your password";
+  const html = `
+    <html>
+      <body style="font-family: Arial, sans-serif; background: #f5f7f8; padding: 24px; color: #12251b;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 24px;">
+          <h1 style="margin-top: 0;">${subject}</h1>
+          <p>Hello ${safeName},</p>
+          <p>We received a request to reset your ${audience} password for AcreCap.</p>
+          <p>
+            <a href="${safeLink}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#f7a51a;color:#12251b;text-decoration:none;font-weight:700;">
+              Reset Password
+            </a>
+          </p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+          <p>This link will expire in 30 minutes.</p>
+        </div>
+      </body>
+    </html>
+  `;
+  const text = `Hello ${name || "there"},\n\nUse this link to reset your password: ${link}\n\nThis link expires in 30 minutes.`;
+
+  await fetch(webhook, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "password_reset_email",
+      to: email,
+      subject,
+      html,
+      text,
+      meta: { audience },
+    }),
+  }).catch((error) => {
+    console.error("Password reset email failed:", error);
+  });
 };
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -208,6 +286,66 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.clearCookie("acrecap.sid");
       res.json({ ok: true });
     });
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+    }
+
+    const email = normalizeEmail(parsed.data.email);
+    const audience = parsed.data.audience ?? "user";
+
+    try {
+      const user = await storage.getUserByEmail(email);
+      const shouldIssueReset =
+        !!user &&
+        ((audience === "admin" && user.role === "admin") ||
+          (audience === "user" && user.role !== "admin" && !isReservedAdminEmail(email)));
+
+      if (shouldIssueReset) {
+        const reset = await storage.createPasswordResetToken(email);
+        if (reset) {
+          const token = reset.token;
+          const resetLink = `${getAppBaseUrl().replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}&audience=${audience}&nonce=${crypto.randomUUID()}`;
+          await sendPasswordResetEmail({
+            email: reset.user.email,
+            name: reset.user.name,
+            link: resetLink,
+            audience,
+          });
+        }
+      }
+
+      return res.json({ ok: true });
+    } catch (error: any) {
+      if (isDatabaseUnavailable(error)) {
+        return res.status(503).json({ error: "database_unavailable" });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+    }
+
+    try {
+      const user = await storage.resetPasswordWithToken(parsed.data.token, parsed.data.password);
+      if (!user) {
+        return res.status(400).json({ error: "invalid_or_expired_token" });
+      }
+
+      return res.json({ ok: true });
+    } catch (error: any) {
+      if (isDatabaseUnavailable(error)) {
+        return res.status(503).json({ error: "database_unavailable" });
+      }
+      return res.status(500).json({ error: error.message });
+    }
   });
 
   app.get("/api/users/me", requireAuth, async (req, res) => {
