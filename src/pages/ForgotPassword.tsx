@@ -28,9 +28,15 @@ export default function ForgotPassword() {
       });
       setEmail("");
     } catch (error: any) {
+      const message =
+        error?.message === "password_reset_email_not_configured"
+          ? "Password reset email service is not configured yet."
+          : error?.message === "password_reset_email_failed"
+          ? "We could not send the reset email right now. Please try again."
+          : error?.message || "Unable to process password reset right now.";
       toast({
         title: "Request failed",
-        description: error?.message || "Unable to process password reset right now.",
+        description: message,
         variant: "destructive",
       });
     } finally {

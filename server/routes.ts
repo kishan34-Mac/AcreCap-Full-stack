@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { z } from "zod";
 import { storage } from "./storage";
 import { signAuthToken } from "./auth";
@@ -124,16 +125,18 @@ const sendPasswordResetEmail = async ({
   link: string;
   audience: "user" | "admin";
 }) => {
-  const webhook = process.env.PASSWORD_RESET_EMAIL_WEBHOOK_URL?.trim();
-  if (!webhook) {
-    console.log(`Password reset link for ${email}: ${link}`);
-    return;
-  }
-
   const safeName = escapeHtml(name || "there");
   const safeLink = escapeHtml(link);
   const subject =
     audience === "admin" ? "Reset your admin password" : "Reset your password";
+  const webhook = process.env.PASSWORD_RESET_EMAIL_WEBHOOK_URL?.trim();
+  const smtpHost = process.env.SMTP_HOST?.trim();
+  const smtpPort = Number(process.env.SMTP_PORT?.trim() || "587");
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  const smtpFrom = process.env.SMTP_FROM?.trim() || smtpUser;
+  const smtpSecure =
+    process.env.SMTP_SECURE?.trim().toLowerCase() === "true" || smtpPort === 465;
   const html = `
     <html>
       <body style="font-family: Arial, sans-serif; background: #f5f7f8; padding: 24px; color: #12251b;">
@@ -154,7 +157,35 @@ const sendPasswordResetEmail = async ({
   `;
   const text = `Hello ${name || "there"},\n\nUse this link to reset your password: ${link}\n\nThis link expires in 30 minutes.`;
 
-  await fetch(webhook, {
+  if (smtpHost && smtpFrom) {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number.isFinite(smtpPort) ? smtpPort : 587,
+      secure: smtpSecure,
+      auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+    });
+
+    try {
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: email,
+        subject,
+        html,
+        text,
+      });
+      return;
+    } catch (error) {
+      throw new Error(
+        `password_reset_email_failed:${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  if (!webhook) {
+    throw new Error("password_reset_email_not_configured");
+  }
+
+  const response = await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -166,8 +197,12 @@ const sendPasswordResetEmail = async ({
       meta: { audience },
     }),
   }).catch((error) => {
-    console.error("Password reset email failed:", error);
+    throw new Error(`password_reset_email_failed:${error instanceof Error ? error.message : String(error)}`);
   });
+
+  if (!response.ok) {
+    throw new Error(`password_reset_email_failed:${response.status}`);
+  }
 };
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -320,6 +355,14 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       return res.json({ ok: true });
     } catch (error: any) {
+      if (error instanceof Error) {
+        if (error.message === "password_reset_email_not_configured") {
+          return res.status(503).json({ error: "password_reset_email_not_configured" });
+        }
+        if (error.message.startsWith("password_reset_email_failed:")) {
+          return res.status(502).json({ error: "password_reset_email_failed" });
+        }
+      }
       if (isDatabaseUnavailable(error)) {
         return res.status(503).json({ error: "database_unavailable" });
       }

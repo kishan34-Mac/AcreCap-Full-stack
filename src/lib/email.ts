@@ -131,8 +131,8 @@ export function buildStatusEmail(sub: SubmissionInfo, status: SubmissionStatus) 
       <div style="height:16px"></div>
       <div>
         ${isApproved
-          ? `<a class="btn btn-primary" href="https://wa.me/919696255795?text=Hello%20I%20have%20received%20my%20application%20approval%20email%20and%20would%20like%20to%20know%20the%20next%20steps" target="_blank" rel="noopener">Chat with us</a>`
-          : `<a class="btn btn-outline" href="https://wa.me/919696255795?text=Hello%20I%20received%20an%20update%20on%20my%20application%20and%20would%20like%20to%20discuss%20alternative%20options" target="_blank" rel="noopener">Discuss options</a>`}
+          ? `<a class="btn btn-primary" href="https://wa.me/918460847083?text=Hello%20I%20have%20received%20my%20application%20approval%20email%20and%20would%20like%20to%20know%20the%20next%20steps" target="_blank" rel="noopener">Chat with us</a>`
+          : `<a class="btn btn-outline" href="https://wa.me/918460847083?text=Hello%20I%20received%20an%20update%20on%20my%20application%20and%20would%20like%20to%20discuss%20alternative%20options" target="_blank" rel="noopener">Discuss options</a>`}
       </div>
       <div style="height:24px"></div>
       <p style="margin:0; color:#6b7280">Regards,<br/>${company} Team</p>

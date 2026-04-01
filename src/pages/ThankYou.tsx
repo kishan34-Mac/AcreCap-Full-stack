@@ -88,7 +88,7 @@ export default function ThankYou() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up-delayed">
               <Button variant="outline" size="lg" asChild>
-                <a href="https://wa.me/919696255795?text=Hello%21%20I%20would%20like%20detailed%20information%20about%20the%20loan.%20Please%20share%20eligibility%20criteria%2C%20interest%20rates%2C%20required%20documents%2C%20tenure%20options%2C%20and%20processing%20time.%20Thank%20you." target="_blank" rel="noopener noreferrer">
+                <a href="https://wa.me/918460847083?text=Hello%21%20I%20would%20like%20detailed%20information%20about%20the%20loan.%20Please%20share%20eligibility%20criteria%2C%20interest%20rates%2C%20required%20documents%2C%20tenure%20options%2C%20and%20processing%20time.%20Thank%20you." target="_blank" rel="noopener noreferrer">
                   <Phone className="w-5 h-5 mr-2" />
                   Chat on WhatsApp
                 </a>

@@ -60,6 +60,13 @@ MONGODB_DB="acrecap"
 SESSION_SECRET="replace-with-a-strong-random-secret"
 JWT_SECRET="replace-with-a-second-strong-random-secret"
 FRONTEND_URL="https://your-vercel-app.vercel.app"
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="no-reply@example.com"
+SMTP_PASS="replace-with-smtp-password"
+SMTP_FROM="AcreCap <no-reply@example.com>"
+PASSWORD_RESET_EMAIL_WEBHOOK_URL="https://your-email-webhook.example.com"
 ADMIN_EMAIL="admin@example.com"
 ADMIN_PASSWORD="replace-with-a-strong-password"
 ADMIN_NAME="Admin"
@@ -72,11 +79,15 @@ ADMIN_NAME="Admin"
 - `JWT_SECRET`: Secret used for bearer token signing
 - `ADMIN_EMAIL`: Seeded admin login email
 - `ADMIN_PASSWORD`: Seeded admin login password
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS`: Required if you want the app to send reset emails directly over SMTP
 
 ### Optional Variables
 
 - `MONGODB_DB`: Database name, defaults to your configured Mongo database
 - `FRONTEND_URL`: Frontend origin for production CORS
+- `SMTP_SECURE`: Set `true` for SSL SMTP servers, usually with port `465`
+- `SMTP_FROM`: Friendly sender name and email
+- `PASSWORD_RESET_EMAIL_WEBHOOK_URL`: Fallback email webhook if SMTP is not configured
 - `ADMIN_NAME`: Admin display name
 
 ## Local Development
@@ -132,6 +143,13 @@ Set these environment variables on Render:
 - `SESSION_SECRET`
 - `JWT_SECRET`
 - `FRONTEND_URL=https://your-vercel-app.vercel.app`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `PASSWORD_RESET_EMAIL_WEBHOOK_URL`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `ADMIN_NAME=Admin`
@@ -156,6 +174,7 @@ Set this environment variable on Vercel:
 - If your database password contains special characters, URL-encode it in the connection string
 - Use strong secrets in production for both `SESSION_SECRET` and `JWT_SECRET`
 - Replace the default admin password before going live
+- Configure SMTP or `PASSWORD_RESET_EMAIL_WEBHOOK_URL` so forgot-password emails can actually be delivered
 
 ## Admin Workflow
 
