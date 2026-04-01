@@ -22,11 +22,19 @@ const authSchema = z.object({
 
 const authAudienceSchema = z.enum(["user", "admin"]).default("user");
 
-const submissionSchema = z.object({
+const submissionBaseSchema = z.object({
+  applicationType: z.enum(["loan", "insurance"]),
   name: z.string().min(1).max(120),
   mobile: z.string().min(8).max(20),
   email: z.string().email().max(160),
   city: z.string().min(1).max(120),
+  panNumber: z.string().nullable().optional(),
+  gstNumber: z.string().nullable().optional(),
+  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+});
+
+const loanSubmissionSchema = submissionBaseSchema.extend({
+  applicationType: z.literal("loan"),
   businessName: z.string().min(1).max(160),
   businessType: z.string().min(1).max(160),
   annualTurnover: z.string().min(1).max(160),
@@ -34,10 +42,25 @@ const submissionSchema = z.object({
   loanAmount: z.string().min(1).max(120),
   loanPurpose: z.string().min(1).max(200),
   tenure: z.string().min(1).max(60),
+});
+
+const insuranceSubmissionSchema = submissionBaseSchema.extend({
+  applicationType: z.literal("insurance"),
+  insuranceCategory: z.string().min(1).max(120),
+  insurancePlan: z.string().min(1).max(160),
+  coverageAmount: z.string().min(1).max(120),
+  policyTerm: z.string().min(1).max(80),
+  insurancePurpose: z.string().min(1).max(200),
+  existingPolicyProvider: z.string().max(160).nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
   panNumber: z.string().nullable().optional(),
   gstNumber: z.string().nullable().optional(),
-  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
 });
+
+const submissionSchema = z.discriminatedUnion("applicationType", [
+  loanSubmissionSchema,
+  insuranceSubmissionSchema,
+]);
 
 const serializeSessionUser = (user: Awaited<ReturnType<typeof storage.getUser>>) =>
   user

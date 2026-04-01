@@ -15,18 +15,32 @@ const userSchema = new Schema(
 
 const submissionSchema = new Schema(
   {
+    applicationType: {
+      type: String,
+      enum: ["loan", "insurance"],
+      default: "loan",
+      required: true,
+      trim: true,
+    },
     userId: { type: String, default: null },
     name: { type: String, required: true, trim: true },
     mobile: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     city: { type: String, required: true, trim: true },
-    businessName: { type: String, required: true, trim: true },
-    businessType: { type: String, required: true, trim: true },
-    annualTurnover: { type: String, required: true, trim: true },
-    yearsInBusiness: { type: String, required: true, trim: true },
-    loanAmount: { type: String, required: true, trim: true },
-    loanPurpose: { type: String, required: true, trim: true },
-    tenure: { type: String, required: true, trim: true },
+    businessName: { type: String, default: null, trim: true },
+    businessType: { type: String, default: null, trim: true },
+    annualTurnover: { type: String, default: null, trim: true },
+    yearsInBusiness: { type: String, default: null, trim: true },
+    loanAmount: { type: String, default: null, trim: true },
+    loanPurpose: { type: String, default: null, trim: true },
+    tenure: { type: String, default: null, trim: true },
+    insuranceCategory: { type: String, default: null, trim: true },
+    insurancePlan: { type: String, default: null, trim: true },
+    coverageAmount: { type: String, default: null, trim: true },
+    policyTerm: { type: String, default: null, trim: true },
+    insurancePurpose: { type: String, default: null, trim: true },
+    existingPolicyProvider: { type: String, default: null, trim: true },
+    notes: { type: String, default: null, trim: true },
     panNumber: { type: String, default: null },
     gstNumber: { type: String, default: null },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
@@ -66,18 +80,26 @@ export interface User {
 
 export interface Submission {
   id: string;
+  applicationType: "loan" | "insurance";
   userId: string | null;
   name: string;
   mobile: string;
   email: string;
   city: string;
-  businessName: string;
-  businessType: string;
-  annualTurnover: string;
-  yearsInBusiness: string;
-  loanAmount: string;
-  loanPurpose: string;
-  tenure: string;
+  businessName: string | null;
+  businessType: string | null;
+  annualTurnover: string | null;
+  yearsInBusiness: string | null;
+  loanAmount: string | null;
+  loanPurpose: string | null;
+  tenure: string | null;
+  insuranceCategory: string | null;
+  insurancePlan: string | null;
+  coverageAmount: string | null;
+  policyTerm: string | null;
+  insurancePurpose: string | null;
+  existingPolicyProvider: string | null;
+  notes: string | null;
   panNumber: string | null;
   gstNumber: string | null;
   status: "pending" | "approved" | "rejected";
@@ -109,18 +131,26 @@ export interface UpdateUserInput {
 }
 
 export interface CreateSubmissionInput {
+  applicationType: "loan" | "insurance";
   userId?: string | null;
   name: string;
   mobile: string;
   email: string;
   city: string;
-  businessName: string;
-  businessType: string;
-  annualTurnover: string;
-  yearsInBusiness: string;
-  loanAmount: string;
-  loanPurpose: string;
-  tenure: string;
+  businessName?: string | null;
+  businessType?: string | null;
+  annualTurnover?: string | null;
+  yearsInBusiness?: string | null;
+  loanAmount?: string | null;
+  loanPurpose?: string | null;
+  tenure?: string | null;
+  insuranceCategory?: string | null;
+  insurancePlan?: string | null;
+  coverageAmount?: string | null;
+  policyTerm?: string | null;
+  insurancePurpose?: string | null;
+  existingPolicyProvider?: string | null;
+  notes?: string | null;
   panNumber?: string | null;
   gstNumber?: string | null;
   status?: "pending" | "approved" | "rejected";
@@ -144,18 +174,26 @@ const serializeUser = (user: any): User => ({
 
 const serializeSubmission = (submission: any): Submission => ({
   id: submission._id.toString(),
+  applicationType: submission.applicationType || "loan",
   userId: submission.userId || null,
   name: submission.name,
   mobile: submission.mobile,
   email: submission.email,
   city: submission.city,
-  businessName: submission.businessName,
-  businessType: submission.businessType,
-  annualTurnover: submission.annualTurnover,
-  yearsInBusiness: submission.yearsInBusiness,
-  loanAmount: submission.loanAmount,
-  loanPurpose: submission.loanPurpose,
-  tenure: submission.tenure,
+  businessName: submission.businessName || null,
+  businessType: submission.businessType || null,
+  annualTurnover: submission.annualTurnover || null,
+  yearsInBusiness: submission.yearsInBusiness || null,
+  loanAmount: submission.loanAmount || null,
+  loanPurpose: submission.loanPurpose || null,
+  tenure: submission.tenure || null,
+  insuranceCategory: submission.insuranceCategory || null,
+  insurancePlan: submission.insurancePlan || null,
+  coverageAmount: submission.coverageAmount || null,
+  policyTerm: submission.policyTerm || null,
+  insurancePurpose: submission.insurancePurpose || null,
+  existingPolicyProvider: submission.existingPolicyProvider || null,
+  notes: submission.notes || null,
   panNumber: submission.panNumber || null,
   gstNumber: submission.gstNumber || null,
   status: submission.status,
@@ -300,6 +338,20 @@ export class DatabaseStorage implements IStorage {
     const created = await SubmissionModel.create({
       ...submission,
       userId: submission.userId || null,
+      businessName: submission.businessName || null,
+      businessType: submission.businessType || null,
+      annualTurnover: submission.annualTurnover || null,
+      yearsInBusiness: submission.yearsInBusiness || null,
+      loanAmount: submission.loanAmount || null,
+      loanPurpose: submission.loanPurpose || null,
+      tenure: submission.tenure || null,
+      insuranceCategory: submission.insuranceCategory || null,
+      insurancePlan: submission.insurancePlan || null,
+      coverageAmount: submission.coverageAmount || null,
+      policyTerm: submission.policyTerm || null,
+      insurancePurpose: submission.insurancePurpose || null,
+      existingPolicyProvider: submission.existingPolicyProvider || null,
+      notes: submission.notes || null,
       panNumber: submission.panNumber || null,
       gstNumber: submission.gstNumber || null,
       status: submission.status || "pending",

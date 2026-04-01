@@ -8,18 +8,26 @@ export interface AuthUser {
 
 export interface Submission {
   id: string;
+  applicationType: "loan" | "insurance";
   userId: string | null;
   name: string;
   mobile: string;
   email: string;
   city: string;
-  businessName: string;
-  businessType: string;
-  annualTurnover: string;
-  yearsInBusiness: string;
-  loanAmount: string;
-  loanPurpose: string;
-  tenure: string;
+  businessName: string | null;
+  businessType: string | null;
+  annualTurnover: string | null;
+  yearsInBusiness: string | null;
+  loanAmount: string | null;
+  loanPurpose: string | null;
+  tenure: string | null;
+  insuranceCategory: string | null;
+  insurancePlan: string | null;
+  coverageAmount: string | null;
+  policyTerm: string | null;
+  insurancePurpose: string | null;
+  existingPolicyProvider: string | null;
+  notes: string | null;
   panNumber: string | null;
   gstNumber: string | null;
   status: "pending" | "approved" | "rejected";
@@ -83,6 +91,32 @@ export function setStoredAuthUser(user: AuthUser | null) {
   } catch {
     // ignore storage errors
   }
+}
+
+export function getSubmissionTypeLabel(submission: Submission): string {
+  return submission.applicationType === "insurance" ? "Insurance" : "Loan";
+}
+
+export function getSubmissionPrimaryValue(submission: Submission): string {
+  return submission.applicationType === "insurance"
+    ? submission.coverageAmount || "-"
+    : submission.loanAmount || "-";
+}
+
+export function getSubmissionPrimaryLabel(submission: Submission): string {
+  return submission.applicationType === "insurance" ? "Coverage" : "Amount";
+}
+
+export function getSubmissionTitle(submission: Submission): string {
+  return submission.applicationType === "insurance"
+    ? submission.insuranceCategory || "Insurance Application"
+    : submission.businessName || "Loan Application";
+}
+
+export function getSubmissionSecondaryValue(submission: Submission): string {
+  return submission.applicationType === "insurance"
+    ? submission.insurancePlan || "-"
+    : submission.loanPurpose || "-";
 }
 
 export async function apiFetch<T>(

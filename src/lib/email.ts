@@ -5,15 +5,21 @@ export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 
 export interface SubmissionInfo {
   id: string;
+  applicationType: 'loan' | 'insurance';
   name: string;
   email: string;
   mobile: string;
   city: string;
-  businessName: string;
-  businessType?: string;
-  loanAmount: string;
-  loanPurpose: string;
-  tenure: string;
+  businessName?: string | null;
+  businessType?: string | null;
+  loanAmount?: string | null;
+  loanPurpose?: string | null;
+  tenure?: string | null;
+  insuranceCategory?: string | null;
+  insurancePlan?: string | null;
+  coverageAmount?: string | null;
+  policyTerm?: string | null;
+  insurancePurpose?: string | null;
   created_at?: string;
   status?: SubmissionStatus;
 }
@@ -21,25 +27,34 @@ export interface SubmissionInfo {
 export function buildStatusEmail(sub: SubmissionInfo, status: SubmissionStatus) {
   const company = 'AcreCap';
   const greetingName = sub.name?.trim() || 'Valued Customer';
+  const isInsurance = sub.applicationType === 'insurance';
+  const applicationLabel = isInsurance ? 'insurance application' : 'loan application';
+  const amountLabel = isInsurance ? 'Coverage Amount' : 'Loan Amount';
+  const purposeLabel = isInsurance ? 'Coverage Purpose' : 'Purpose';
+  const termLabel = isInsurance ? 'Policy Term' : 'Tenure';
+  const amountValue = isInsurance ? sub.coverageAmount : sub.loanAmount;
+  const purposeValue = isInsurance ? sub.insurancePurpose : sub.loanPurpose;
+  const termValue = isInsurance ? sub.policyTerm : sub.tenure;
+  const productLabel = isInsurance ? sub.insuranceCategory || 'Insurance' : sub.businessName || 'Loan';
 
   const isApproved = status === 'approved';
   const subject = isApproved
-    ? `Good news! Your loan application has been approved`
+    ? `Good news! Your ${applicationLabel} has been approved`
     : status === 'rejected'
-    ? `Update on your loan application`
-    : `We received your loan application`;
+    ? `Update on your ${applicationLabel}`
+    : `We received your ${applicationLabel}`;
 
   const nextSteps = isApproved
     ? `<ul style="margin:0; padding-left:18px">
          <li>Our team will contact you within 24 hours to verify details</li>
-         <li>Prepare KYC documents (PAN, Aadhaar), business proof, and bank statements</li>
-         <li>We’ll share the sanction letter and finalize disbursement timeline</li>
+         <li>Keep your submitted information and supporting documents ready for verification</li>
+         <li>We’ll share the next approval and issuance steps shortly</li>
        </ul>`
     : `<p style="margin:0">While we’re unable to proceed right now, here are some options you can consider:</p>
        <ul style="margin:0; padding-left:18px">
-         <li>Apply for a lower loan amount</li>
-         <li>Share additional business documents to strengthen your profile</li>
-         <li>Explore secured loan options with collateral</li>
+         <li>Review and update the submitted details</li>
+         <li>Share additional supporting documents if requested</li>
+         <li>Discuss alternative products or revised requirements with our team</li>
        </ul>
        <p style="margin:0">Reply to this email and our team will help you with the best available alternatives.</p>`;
 
@@ -54,25 +69,33 @@ export function buildStatusEmail(sub: SubmissionInfo, status: SubmissionStatus) 
         <td style="padding:8px 12px; border:1px solid #e5e7eb">${sub.name}</td>
       </tr>
       <tr>
-        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">Loan Amount</td>
-        <td style="padding:8px 12px; border:1px solid #e5e7eb">${sub.loanAmount}</td>
+        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">Application Type</td>
+        <td style="padding:8px 12px; border:1px solid #e5e7eb">${isInsurance ? 'Insurance' : 'Loan'}</td>
       </tr>
       <tr>
-        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">Purpose</td>
-        <td style="padding:8px 12px; border:1px solid #e5e7eb">${sub.loanPurpose}</td>
+        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">${isInsurance ? 'Policy / Product' : 'Business / Product'}</td>
+        <td style="padding:8px 12px; border:1px solid #e5e7eb">${productLabel}</td>
       </tr>
       <tr>
-        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">Tenure</td>
-        <td style="padding:8px 12px; border:1px solid #e5e7eb">${sub.tenure}</td>
+        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">${amountLabel}</td>
+        <td style="padding:8px 12px; border:1px solid #e5e7eb">${amountValue || '-'}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">${purposeLabel}</td>
+        <td style="padding:8px 12px; border:1px solid #e5e7eb">${purposeValue || '-'}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px; background:#f9fafb; border:1px solid #e5e7eb">${termLabel}</td>
+        <td style="padding:8px 12px; border:1px solid #e5e7eb">${termValue || '-'}</td>
       </tr>
     </table>
   `;
 
   const intro = isApproved
-    ? `<p style="margin:0">Congratulations ${greetingName}! We’re excited to share that your loan application has been <strong>approved</strong>.</p>`
+    ? `<p style="margin:0">Congratulations ${greetingName}! We’re excited to share that your ${applicationLabel} has been <strong>approved</strong>.</p>`
     : status === 'rejected'
-    ? `<p style="margin:0">Hello ${greetingName}, thank you for applying with ${company}. After careful review, we’re unable to approve your application at this time.</p>`
-    : `<p style="margin:0">Hello ${greetingName}, thank you for applying with ${company}. Your application is currently under review. We’ll reach out shortly.</p>`;
+    ? `<p style="margin:0">Hello ${greetingName}, thank you for applying with ${company}. After careful review, we’re unable to approve your ${applicationLabel} at this time.</p>`
+    : `<p style="margin:0">Hello ${greetingName}, thank you for applying with ${company}. Your ${applicationLabel} is currently under review. We’ll reach out shortly.</p>`;
 
   const html = `
 <!doctype html>
@@ -108,8 +131,8 @@ export function buildStatusEmail(sub: SubmissionInfo, status: SubmissionStatus) 
       <div style="height:16px"></div>
       <div>
         ${isApproved
-          ? `<a class="btn btn-primary" href="https://wa.me/919696255795?text=Hello%20I%20have%20received%20my%20loan%20approval%20email%20and%20would%20like%20to%20know%20the%20next%20steps" target="_blank" rel="noopener">Chat with us</a>`
-          : `<a class="btn btn-outline" href="https://wa.me/919696255795?text=Hello%20I%20received%20an%20update%20on%20my%20loan%20application%20and%20would%20like%20to%20discuss%20alternative%20options" target="_blank" rel="noopener">Discuss options</a>`}
+          ? `<a class="btn btn-primary" href="https://wa.me/919696255795?text=Hello%20I%20have%20received%20my%20application%20approval%20email%20and%20would%20like%20to%20know%20the%20next%20steps" target="_blank" rel="noopener">Chat with us</a>`
+          : `<a class="btn btn-outline" href="https://wa.me/919696255795?text=Hello%20I%20received%20an%20update%20on%20my%20application%20and%20would%20like%20to%20discuss%20alternative%20options" target="_blank" rel="noopener">Discuss options</a>`}
       </div>
       <div style="height:24px"></div>
       <p style="margin:0; color:#6b7280">Regards,<br/>${company} Team</p>
@@ -122,11 +145,11 @@ export function buildStatusEmail(sub: SubmissionInfo, status: SubmissionStatus) 
 
   const text = `${subject}\n\n` +
     (isApproved
-      ? `Congratulations ${greetingName}! Your application has been approved. Next steps: verification call, prepare documents, and we’ll share the sanction letter.\n\n`
+      ? `Congratulations ${greetingName}! Your ${applicationLabel} has been approved. Next steps: verification call, keep your documents ready, and we’ll share the next issuance steps.\n\n`
       : status === 'rejected'
-      ? `Hello ${greetingName}, we’re unable to approve your application at this time. Consider a lower amount, add documents, or explore secured options. Reply and we’ll assist.\n\n`
-      : `Hello ${greetingName}, your application is under review. We’ll contact you shortly.\n\n`) +
-    `Application ID: ${sub.id}\nLoan Amount: ${sub.loanAmount}\nPurpose: ${sub.loanPurpose}\nTenure: ${sub.tenure}\n\nRegards, ${company} Team`;
+      ? `Hello ${greetingName}, we’re unable to approve your ${applicationLabel} at this time. Reply and we’ll help you review the next options.\n\n`
+      : `Hello ${greetingName}, your ${applicationLabel} is under review. We’ll contact you shortly.\n\n`) +
+    `Application ID: ${sub.id}\nApplication Type: ${isInsurance ? 'Insurance' : 'Loan'}\nProduct: ${productLabel}\n${amountLabel}: ${amountValue || '-'}\n${purposeLabel}: ${purposeValue || '-'}\n${termLabel}: ${termValue || '-'}\n\nRegards, ${company} Team`;
 
   return { subject, html, text };
 }

@@ -11,12 +11,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  apiFetch,
+  getSubmissionPrimaryLabel,
+  getSubmissionPrimaryValue,
+  getSubmissionSecondaryValue,
+  getSubmissionTitle,
+  getSubmissionTypeLabel,
+  type Submission,
+} from "@/lib/api";
 import { sendStatusEmail } from "@/lib/email";
-import { apiFetch, type Submission } from "@/lib/api";
 
 const CSV_HEADERS = [
   "ID",
   "Created At",
+  "Application Type",
   "Status",
   "Name",
   "Mobile",
@@ -29,12 +38,19 @@ const CSV_HEADERS = [
   "Loan Amount",
   "Loan Purpose",
   "Tenure",
+  "Insurance Category",
+  "Insurance Plan",
+  "Coverage Amount",
+  "Policy Term",
+  "Insurance Purpose",
+  "Existing Policy Provider",
+  "Notes",
   "PAN",
   "GST",
   "User ID",
 ];
 
-const escapeCsv = (v: any) => {
+const escapeCsv = (v: unknown) => {
   const s = String(v ?? "");
   const needsQuote = /[","\n]/.test(s);
   const escaped = s.replace(/"/g, '""');
@@ -48,11 +64,56 @@ const escapeHtml = (value: unknown) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+const statusClassName = (status: Submission["status"]) =>
+  status === "approved"
+    ? "bg-success/20 text-success"
+    : status === "rejected"
+    ? "bg-destructive/20 text-destructive"
+    : "bg-secondary text-muted-foreground";
+
+const detailRows = (selected: Submission) => {
+  const baseRows = [
+    ["Created", new Date(selected.createdAt).toLocaleString()],
+    ["Application Type", getSubmissionTypeLabel(selected)],
+    ["Status", selected.status],
+    ["Name", selected.name],
+    ["Email", selected.email],
+    ["Mobile", selected.mobile],
+    ["City", selected.city],
+  ];
+
+  const loanRows =
+    selected.applicationType === "loan"
+      ? [
+          ["Business Name", selected.businessName || "-"],
+          ["Business Type", selected.businessType || "-"],
+          ["Annual Turnover", selected.annualTurnover || "-"],
+          ["Years In Business", selected.yearsInBusiness || "-"],
+          ["Loan Amount", selected.loanAmount || "-"],
+          ["Loan Purpose", selected.loanPurpose || "-"],
+          ["Tenure", selected.tenure || "-"],
+          ["PAN", selected.panNumber || "-"],
+          ["GST", selected.gstNumber || "-"],
+        ]
+      : [
+          ["Insurance Category", selected.insuranceCategory || "-"],
+          ["Insurance Plan", selected.insurancePlan || "-"],
+          ["Coverage Amount", selected.coverageAmount || "-"],
+          ["Policy Term", selected.policyTerm || "-"],
+          ["Coverage Purpose", selected.insurancePurpose || "-"],
+          ["Existing Policy Provider", selected.existingPolicyProvider || "-"],
+          ["Notes", selected.notes || "-"],
+        ];
+
+  return [...baseRows, ...loanRows];
+};
+
 export default function Admin() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Submission[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "loan" | "insurance">("all");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Submission | null>(null);
 
@@ -60,10 +121,16 @@ export default function Admin() {
     let mounted = true;
     const load = async () => {
       try {
-        const { submissions } = await apiFetch<{ submissions: Submission[] }>("submissions", { method: "GET" });
+        const { submissions } = await apiFetch<{ submissions: Submission[] }>("submissions", {
+          method: "GET",
+        });
         if (mounted) setRows(submissions);
       } catch (error: any) {
-        toast({ title: "Failed to load submissions", description: error?.message || "Please try again.", variant: "destructive" });
+        toast({
+          title: "Failed to load submissions",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -78,11 +145,29 @@ export default function Admin() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (typeFilter !== "all" && r.applicationType !== typeFilter) return false;
       if (!q) return true;
-      const hay = `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.businessName} ${r.loanAmount}`.toLowerCase();
+
+      const hay = [
+        r.name,
+        r.email,
+        r.mobile,
+        r.city,
+        r.businessName,
+        r.loanAmount,
+        r.loanPurpose,
+        r.insuranceCategory,
+        r.insurancePlan,
+        r.coverageAmount,
+        r.insurancePurpose,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       return hay.includes(q);
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, typeFilter]);
 
   const exportCsv = () => {
     const header = CSV_HEADERS.map(escapeCsv).join(",");
@@ -90,18 +175,26 @@ export default function Admin() {
       [
         r.id,
         r.createdAt,
+        r.applicationType,
         r.status,
         r.name,
         r.mobile,
         r.email,
         r.city,
-        r.businessName,
-        r.businessType,
-        r.annualTurnover,
-        r.yearsInBusiness,
-        r.loanAmount,
-        r.loanPurpose,
-        r.tenure,
+        r.businessName ?? "",
+        r.businessType ?? "",
+        r.annualTurnover ?? "",
+        r.yearsInBusiness ?? "",
+        r.loanAmount ?? "",
+        r.loanPurpose ?? "",
+        r.tenure ?? "",
+        r.insuranceCategory ?? "",
+        r.insurancePlan ?? "",
+        r.coverageAmount ?? "",
+        r.policyTerm ?? "",
+        r.insurancePurpose ?? "",
+        r.existingPolicyProvider ?? "",
+        r.notes ?? "",
         r.panNumber ?? "",
         r.gstNumber ?? "",
         r.userId ?? "",
@@ -109,6 +202,7 @@ export default function Admin() {
         .map(escapeCsv)
         .join(",")
     );
+
     const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -127,18 +221,26 @@ export default function Admin() {
           <tr>
             <td>${escapeHtml(r.id)}</td>
             <td>${escapeHtml(r.createdAt)}</td>
+            <td>${escapeHtml(r.applicationType)}</td>
             <td>${escapeHtml(r.status)}</td>
             <td>${escapeHtml(r.name)}</td>
             <td>${escapeHtml(r.mobile)}</td>
             <td>${escapeHtml(r.email)}</td>
             <td>${escapeHtml(r.city)}</td>
-            <td>${escapeHtml(r.businessName)}</td>
-            <td>${escapeHtml(r.businessType)}</td>
-            <td>${escapeHtml(r.annualTurnover)}</td>
-            <td>${escapeHtml(r.yearsInBusiness)}</td>
-            <td>${escapeHtml(r.loanAmount)}</td>
-            <td>${escapeHtml(r.loanPurpose)}</td>
-            <td>${escapeHtml(r.tenure)}</td>
+            <td>${escapeHtml(r.businessName ?? "")}</td>
+            <td>${escapeHtml(r.businessType ?? "")}</td>
+            <td>${escapeHtml(r.annualTurnover ?? "")}</td>
+            <td>${escapeHtml(r.yearsInBusiness ?? "")}</td>
+            <td>${escapeHtml(r.loanAmount ?? "")}</td>
+            <td>${escapeHtml(r.loanPurpose ?? "")}</td>
+            <td>${escapeHtml(r.tenure ?? "")}</td>
+            <td>${escapeHtml(r.insuranceCategory ?? "")}</td>
+            <td>${escapeHtml(r.insurancePlan ?? "")}</td>
+            <td>${escapeHtml(r.coverageAmount ?? "")}</td>
+            <td>${escapeHtml(r.policyTerm ?? "")}</td>
+            <td>${escapeHtml(r.insurancePurpose ?? "")}</td>
+            <td>${escapeHtml(r.existingPolicyProvider ?? "")}</td>
+            <td>${escapeHtml(r.notes ?? "")}</td>
             <td>${escapeHtml(r.panNumber ?? "")}</td>
             <td>${escapeHtml(r.gstNumber ?? "")}</td>
             <td>${escapeHtml(r.userId ?? "")}</td>
@@ -149,9 +251,7 @@ export default function Admin() {
 
     const worksheet = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-        <head>
-          <meta charset="UTF-8" />
-        </head>
+        <head><meta charset="UTF-8" /></head>
         <body>
           <table>
             <thead>
@@ -188,6 +288,7 @@ export default function Admin() {
       sendStatusEmail(
         {
           id: submission.id,
+          applicationType: submission.applicationType,
           name: submission.name,
           email: submission.email,
           mobile: submission.mobile,
@@ -197,6 +298,11 @@ export default function Admin() {
           loanAmount: submission.loanAmount,
           loanPurpose: submission.loanPurpose,
           tenure: submission.tenure,
+          insuranceCategory: submission.insuranceCategory,
+          insurancePlan: submission.insurancePlan,
+          coverageAmount: submission.coverageAmount,
+          policyTerm: submission.policyTerm,
+          insurancePurpose: submission.insurancePurpose,
           created_at: submission.createdAt,
           status: submission.status,
         },
@@ -247,15 +353,39 @@ export default function Admin() {
             </div>
           </div>
 
-          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
-            <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <select className="border border-border rounded-md bg-background p-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-              <option value="all">All</option>
+          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
+            <Input
+              placeholder="Search by name, email, city, type, amount"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="rounded-md border border-border bg-background p-2 text-sm"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+            >
+              <option value="all">All Types</option>
+              <option value="loan">Loan</option>
+              <option value="insurance">Insurance</option>
+            </select>
+            <select
+              className="rounded-md border border-border bg-background p-2 text-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setTypeFilter("all");
+                setStatusFilter("all");
+              }}
+            >
               Reset
             </Button>
           </div>
@@ -263,13 +393,12 @@ export default function Admin() {
           <div className="hidden overflow-x-auto glass-card p-0 md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b border-border">
+                <tr className="border-b border-border text-left">
                   <th className="p-3">Created</th>
+                  <th className="p-3">Type</th>
                   <th className="p-3">Name</th>
-                  <th className="p-3">Email</th>
-                  <th className="p-3">Mobile</th>
-                  <th className="p-3">City</th>
-                  <th className="p-3">Amount</th>
+                  <th className="p-3">Product</th>
+                  <th className="p-3">Primary</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Actions</th>
                 </tr>
@@ -278,17 +407,24 @@ export default function Admin() {
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-b border-border/50">
                     <td className="p-3">{new Date(r.createdAt).toLocaleString()}</td>
-                    <td className="p-3">{r.name}</td>
-                    <td className="p-3">{r.email}</td>
-                    <td className="p-3">{r.mobile}</td>
-                    <td className="p-3">{r.city}</td>
-                    <td className="p-3">{r.loanAmount}</td>
+                    <td className="p-3">{getSubmissionTypeLabel(r)}</td>
                     <td className="p-3">
-                      <span className={`inline-block px-2 py-1 rounded text-xs ${r.status === "approved" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                      <div className="font-medium">{r.name}</div>
+                      <div className="text-xs text-muted-foreground">{r.email}</div>
+                    </td>
+                    <td className="p-3">{getSubmissionTitle(r)}</td>
+                    <td className="p-3">
+                      <div className="font-medium">{getSubmissionPrimaryValue(r)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getSubmissionPrimaryLabel(r)}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <span className={`inline-block rounded px-2 py-1 text-xs ${statusClassName(r.status)}`}>
                         {r.status}
                       </span>
                     </td>
-                    <td className="p-3 flex flex-wrap gap-2">
+                    <td className="flex flex-wrap gap-2 p-3">
                       <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
                         View
                       </Button>
@@ -306,7 +442,7 @@ export default function Admin() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td className="p-4 text-center text-muted-foreground" colSpan={8}>
+                    <td className="p-4 text-center text-muted-foreground" colSpan={7}>
                       No submissions found
                     </td>
                   </tr>
@@ -321,9 +457,11 @@ export default function Admin() {
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-semibold text-foreground">{r.name}</h3>
-                    <p className="text-xs text-muted-foreground">{r.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getSubmissionTypeLabel(r)} • {getSubmissionTitle(r)}
+                    </p>
                   </div>
-                  <span className={`inline-block rounded px-2 py-1 text-xs ${r.status === "approved" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                  <span className={`inline-block rounded px-2 py-1 text-xs ${statusClassName(r.status)}`}>
                     {r.status}
                   </span>
                 </div>
@@ -333,16 +471,16 @@ export default function Admin() {
                     <p className="text-foreground">{new Date(r.createdAt).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="text-foreground">{r.loanAmount}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Mobile</p>
-                    <p className="text-foreground">{r.mobile}</p>
+                    <p className="text-xs text-muted-foreground">{getSubmissionPrimaryLabel(r)}</p>
+                    <p className="text-foreground">{getSubmissionPrimaryValue(r)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">City</p>
                     <p className="text-foreground">{r.city}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Purpose</p>
+                    <p className="text-foreground">{getSubmissionSecondaryValue(r)}</p>
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
@@ -373,29 +511,18 @@ export default function Admin() {
               <DialogHeader>
                 <DialogTitle>Submission Details</DialogTitle>
                 <DialogDescription>
-                  All user-provided information organized by section.
+                  All user-provided information organized by application type.
                 </DialogDescription>
               </DialogHeader>
 
               {selected && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-muted-foreground text-xs">Created</span><div className="font-medium">{new Date(selected.createdAt).toLocaleString()}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Status</span><div className="font-medium">{selected.status}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Name</span><div className="font-medium">{selected.name}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Email</span><div className="font-medium">{selected.email}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Mobile</span><div className="font-medium">{selected.mobile}</div></div>
-                    <div><span className="text-muted-foreground text-xs">City</span><div className="font-medium">{selected.city}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Business Name</span><div className="font-medium">{selected.businessName}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Business Type</span><div className="font-medium">{selected.businessType}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Annual Turnover</span><div className="font-medium">{selected.annualTurnover}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Years In Business</span><div className="font-medium">{selected.yearsInBusiness}</div></div>
-                    <div><span className="text-muted-foreground text-xs">PAN</span><div className="font-medium">{selected.panNumber || "-"}</div></div>
-                    <div><span className="text-muted-foreground text-xs">GST</span><div className="font-medium">{selected.gstNumber || "-"}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Amount</span><div className="font-medium">{selected.loanAmount}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Purpose</span><div className="font-medium">{selected.loanPurpose}</div></div>
-                    <div><span className="text-muted-foreground text-xs">Tenure</span><div className="font-medium">{selected.tenure}</div></div>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                  {detailRows(selected).map(([label, value]) => (
+                    <div key={label}>
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <div className="font-medium">{value}</div>
+                    </div>
+                  ))}
                 </div>
               )}
             </DialogContent>

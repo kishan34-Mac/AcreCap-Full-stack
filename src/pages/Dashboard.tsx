@@ -5,11 +5,19 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { logActivity } from "@/lib/sync";
-import { apiFetch, type Submission } from "@/lib/api";
+import {
+  apiFetch,
+  getSubmissionPrimaryLabel,
+  getSubmissionPrimaryValue,
+  getSubmissionTitle,
+  getSubmissionTypeLabel,
+  type Submission,
+} from "@/lib/api";
 
 const CSV_HEADERS = [
   "ID",
   "Created",
+  "Application Type",
   "Name",
   "Mobile",
   "Email",
@@ -21,23 +29,38 @@ const CSV_HEADERS = [
   "Loan Amount",
   "Loan Purpose",
   "Tenure",
+  "Insurance Category",
+  "Insurance Plan",
+  "Coverage Amount",
+  "Policy Term",
+  "Insurance Purpose",
+  "Existing Policy Provider",
+  "Notes",
   "PAN",
   "GST",
   "Status",
 ];
 
-const escapeCsv = (v: any) => {
+const escapeCsv = (v: unknown) => {
   const s = String(v ?? "");
   const needsQuote = /[",\n]/.test(s);
   const escaped = s.replace(/"/g, '""');
   return needsQuote ? `"${escaped}"` : escaped;
 };
 
+const statusClassName = (status: Submission["status"]) =>
+  status === "approved"
+    ? "bg-success/20 text-success"
+    : status === "rejected"
+    ? "bg-destructive/20 text-destructive"
+    : "bg-secondary text-muted-foreground";
+
 export default function Dashboard() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Submission[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "loan" | "insurance">("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,10 +68,16 @@ export default function Dashboard() {
     const load = async () => {
       try {
         await logActivity("dashboard_open");
-        const { submissions } = await apiFetch<{ submissions: Submission[] }>("submissions", { method: "GET" });
+        const { submissions } = await apiFetch<{ submissions: Submission[] }>("submissions", {
+          method: "GET",
+        });
         if (mounted) setRows(submissions);
       } catch (error: any) {
-        toast({ title: "Failed to load dashboard", description: error?.message || "Please try again.", variant: "destructive" });
+        toast({
+          title: "Failed to load dashboard",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -63,11 +92,29 @@ export default function Dashboard() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (typeFilter !== "all" && r.applicationType !== typeFilter) return false;
       if (!q) return true;
-      const hay = `${r.name} ${r.email} ${r.mobile} ${r.city} ${r.businessName} ${r.loanAmount}`.toLowerCase();
+
+      const hay = [
+        r.name,
+        r.email,
+        r.mobile,
+        r.city,
+        r.businessName,
+        r.loanAmount,
+        r.loanPurpose,
+        r.insuranceCategory,
+        r.insurancePlan,
+        r.coverageAmount,
+        r.insurancePurpose,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       return hay.includes(q);
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, typeFilter]);
 
   const handleExportCsv = () => {
     const header = CSV_HEADERS.map(escapeCsv).join(",");
@@ -75,17 +122,25 @@ export default function Dashboard() {
       [
         r.id,
         r.createdAt,
+        r.applicationType,
         r.name,
         r.mobile,
         r.email,
         r.city,
-        r.businessName,
-        r.businessType,
-        r.annualTurnover,
-        r.yearsInBusiness,
-        r.loanAmount,
-        r.loanPurpose,
-        r.tenure,
+        r.businessName ?? "",
+        r.businessType ?? "",
+        r.annualTurnover ?? "",
+        r.yearsInBusiness ?? "",
+        r.loanAmount ?? "",
+        r.loanPurpose ?? "",
+        r.tenure ?? "",
+        r.insuranceCategory ?? "",
+        r.insurancePlan ?? "",
+        r.coverageAmount ?? "",
+        r.policyTerm ?? "",
+        r.insurancePurpose ?? "",
+        r.existingPolicyProvider ?? "",
+        r.notes ?? "",
         r.panNumber ?? "",
         r.gstNumber ?? "",
         r.status,
@@ -93,7 +148,10 @@ export default function Dashboard() {
         .map(escapeCsv)
         .join(",")
     );
-    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
+
+    const blob = new Blob([[header, ...lines].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -130,15 +188,39 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
-            <Input placeholder="Search by name, email, mobile, city, amount" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <select className="border border-border rounded-md bg-background p-2 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-              <option value="all">All</option>
+          <div className="glass-card mb-6 grid grid-cols-1 gap-4 p-4 md:grid-cols-4">
+            <Input
+              placeholder="Search by name, city, type, amount"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="rounded-md border border-border bg-background p-2 text-sm"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+            >
+              <option value="all">All Types</option>
+              <option value="loan">Loan</option>
+              <option value="insurance">Insurance</option>
+            </select>
+            <select
+              className="rounded-md border border-border bg-background p-2 text-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+                setTypeFilter("all");
+              }}
+            >
               Reset
             </Button>
           </div>
@@ -146,10 +228,11 @@ export default function Dashboard() {
           <div className="hidden overflow-x-auto glass-card p-0 md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b border-border">
+                <tr className="border-b border-border text-left">
                   <th className="p-3">Created</th>
-                  <th className="p-3">Business</th>
-                  <th className="p-3">Amount</th>
+                  <th className="p-3">Type</th>
+                  <th className="p-3">Product</th>
+                  <th className="p-3">Primary</th>
                   <th className="p-3">Status</th>
                 </tr>
               </thead>
@@ -157,10 +240,16 @@ export default function Dashboard() {
                 {filtered.map((row) => (
                   <tr key={row.id} className="border-b border-border/50">
                     <td className="p-3">{new Date(row.createdAt).toLocaleString()}</td>
-                    <td className="p-3">{row.businessName}</td>
-                    <td className="p-3">{row.loanAmount}</td>
+                    <td className="p-3">{getSubmissionTypeLabel(row)}</td>
+                    <td className="p-3">{getSubmissionTitle(row)}</td>
                     <td className="p-3">
-                      <span className={`inline-block px-2 py-1 rounded text-xs ${row.status === "approved" ? "bg-success/20 text-success" : row.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                      <div className="font-medium">{getSubmissionPrimaryValue(row)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getSubmissionPrimaryLabel(row)}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <span className={`inline-block rounded px-2 py-1 text-xs ${statusClassName(row.status)}`}>
                         {row.status}
                       </span>
                     </td>
@@ -168,7 +257,7 @@ export default function Dashboard() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td className="p-4 text-center text-muted-foreground" colSpan={4}>
+                    <td className="p-4 text-center text-muted-foreground" colSpan={5}>
                       No submissions found
                     </td>
                   </tr>
@@ -182,21 +271,23 @@ export default function Dashboard() {
               <div key={row.id} className="glass-card p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-foreground">{row.businessName}</h3>
-                    <p className="text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+                    <h3 className="font-semibold text-foreground">{getSubmissionTitle(row)}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {getSubmissionTypeLabel(row)} • {new Date(row.createdAt).toLocaleString()}
+                    </p>
                   </div>
-                  <span className={`inline-block rounded px-2 py-1 text-xs ${row.status === "approved" ? "bg-success/20 text-success" : row.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-secondary text-muted-foreground"}`}>
+                  <span className={`inline-block rounded px-2 py-1 text-xs ${statusClassName(row.status)}`}>
                     {row.status}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="text-foreground">{row.loanAmount}</p>
+                    <p className="text-xs text-muted-foreground">{getSubmissionPrimaryLabel(row)}</p>
+                    <p className="text-foreground">{getSubmissionPrimaryValue(row)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">City</p>
-                    <p className="text-foreground">{row.city}</p>
+                    <p className="text-xs text-muted-foreground">Applicant</p>
+                    <p className="text-foreground">{row.name}</p>
                   </div>
                 </div>
               </div>

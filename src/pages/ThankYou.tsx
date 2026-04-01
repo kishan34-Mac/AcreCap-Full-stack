@@ -3,7 +3,14 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Check, Phone } from "lucide-react";
-import { apiFetch, type Submission } from "@/lib/api";
+import {
+  apiFetch,
+  getSubmissionPrimaryLabel,
+  getSubmissionPrimaryValue,
+  getSubmissionTitle,
+  getSubmissionTypeLabel,
+  type Submission,
+} from "@/lib/api";
 
 export default function ThankYou() {
   const [params] = useSearchParams();
@@ -44,19 +51,36 @@ export default function ThankYou() {
               <div className="glass-card p-6 text-left mb-8 animate-fade-up-delayed">
                 <h2 className="text-xl font-semibold mb-4">Submission Details</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">Application Type:</span> {getSubmissionTypeLabel(submission)}</div>
                   <div><span className="text-muted-foreground">Name:</span> {submission.name}</div>
                   <div><span className="text-muted-foreground">Mobile:</span> {submission.mobile}</div>
                   <div><span className="text-muted-foreground">Email:</span> {submission.email}</div>
                   <div><span className="text-muted-foreground">City:</span> {submission.city}</div>
-                  <div><span className="text-muted-foreground">Business:</span> {submission.businessName}</div>
-                  <div><span className="text-muted-foreground">Type:</span> {submission.businessType}</div>
-                  <div><span className="text-muted-foreground">Turnover:</span> {submission.annualTurnover}</div>
-                  <div><span className="text-muted-foreground">Years:</span> {submission.yearsInBusiness}</div>
-                  <div><span className="text-muted-foreground">Amount:</span> {submission.loanAmount}</div>
-                  <div><span className="text-muted-foreground">Purpose:</span> {submission.loanPurpose}</div>
-                  <div><span className="text-muted-foreground">Tenure:</span> {submission.tenure}</div>
-                  {submission.panNumber && <div><span className="text-muted-foreground">PAN:</span> {submission.panNumber}</div>}
-                  {submission.gstNumber && <div><span className="text-muted-foreground">GST:</span> {submission.gstNumber}</div>}
+                  <div><span className="text-muted-foreground">Product:</span> {getSubmissionTitle(submission)}</div>
+                  <div><span className="text-muted-foreground">{getSubmissionPrimaryLabel(submission)}:</span> {getSubmissionPrimaryValue(submission)}</div>
+                  {submission.applicationType === "loan" ? (
+                    <>
+                      <div><span className="text-muted-foreground">Business Type:</span> {submission.businessType || "-"}</div>
+                      <div><span className="text-muted-foreground">Turnover:</span> {submission.annualTurnover || "-"}</div>
+                      <div><span className="text-muted-foreground">Years:</span> {submission.yearsInBusiness || "-"}</div>
+                      <div><span className="text-muted-foreground">Purpose:</span> {submission.loanPurpose || "-"}</div>
+                      <div><span className="text-muted-foreground">Tenure:</span> {submission.tenure || "-"}</div>
+                      {submission.panNumber && <div><span className="text-muted-foreground">PAN:</span> {submission.panNumber}</div>}
+                      {submission.gstNumber && <div><span className="text-muted-foreground">GST:</span> {submission.gstNumber}</div>}
+                    </>
+                  ) : (
+                    <>
+                      <div><span className="text-muted-foreground">Plan:</span> {submission.insurancePlan || "-"}</div>
+                      <div><span className="text-muted-foreground">Policy Term:</span> {submission.policyTerm || "-"}</div>
+                      <div><span className="text-muted-foreground">Coverage Purpose:</span> {submission.insurancePurpose || "-"}</div>
+                      {submission.existingPolicyProvider && (
+                        <div><span className="text-muted-foreground">Existing Provider:</span> {submission.existingPolicyProvider}</div>
+                      )}
+                      {submission.notes && (
+                        <div className="sm:col-span-2"><span className="text-muted-foreground">Notes:</span> {submission.notes}</div>
+                      )}
+                    </>
+                  )}
                   <div><span className="text-muted-foreground">Status:</span> {submission.status}</div>
                 </div>
               </div>
