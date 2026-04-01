@@ -72,6 +72,7 @@ const primaryLinks = [
 
 export const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const location = useLocation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -257,99 +258,147 @@ export const Navbar = () => {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="animate-fade-in border-t border-border/50 pb-5 pt-4 lg:hidden">
-            <div className="rounded-3xl border border-border/50 bg-card/80 p-3 shadow-soft backdrop-blur-xl">
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <Button variant="accent" className="w-full" asChild>
-                  <Link to="/apply">
-                    Apply Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to={adminLink}>Admin</Link>
-                </Button>
-              </div>
-
-              {isAuthenticated && !isAdmin && (
-                <div className="mb-3">
-                  <Button variant="secondary" className="w-full" asChild>
-                    <Link to={actionLink.href}>{actionLink.label}</Link>
+          <div className="animate-fade-in border-t border-border/50 lg:hidden">
+            {/* Scrollable Mobile Menu Container */}
+            <div className="mobile-menu-scroll max-h-[calc(100vh-80px)] overflow-y-auto pb-4 pt-4">
+              <div className="px-3">
+                {/* Action Buttons */}
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <Button variant="accent" className="w-full" asChild>
+                    <Link to="/apply">
+                      Apply Now
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link to={adminLink}>Admin</Link>
                   </Button>
                 </div>
-              )}
 
-              <div className="grid gap-1">
-                {primaryLinks.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className="rounded-2xl px-4 py-3 text-sm font-medium text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-2xl bg-background/50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Loans
-                </p>
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {loanTypes.map((loan) => (
-                    <Link
-                      key={loan.href}
-                      to={loan.href}
-                      className="rounded-xl px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      {loan.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl bg-background/50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Insurance
-                </p>
-                <Link
-                  to="/apply/insurance"
-                  className="mb-2 block rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
-                >
-                  Apply for Insurance
-                </Link>
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {insuranceTypes.map((insurance) => (
-                    <Link
-                      key={insurance.href}
-                      to={insurance.href}
-                      className="rounded-xl px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      {insurance.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between rounded-2xl bg-background/50 px-4 py-3">
-                <span className="text-sm font-medium text-foreground/80">
-                  {isAuthenticated ? "Signed in" : "Account"}
-                </span>
-                {isAuthenticated ? (
-                  <button
-                    className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-                    onClick={() => void handleLogout()}
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link
-                    to="/auth"
-                    className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-                  >
-                    Login
-                  </Link>
+                {isAuthenticated && !isAdmin && (
+                  <div className="mb-4">
+                    <Button variant="secondary" className="w-full" asChild>
+                      <Link to={actionLink.href}>{actionLink.label}</Link>
+                    </Button>
+                  </div>
                 )}
+
+                {/* Primary Navigation Links */}
+                <div className="mb-4 rounded-2xl bg-card/50 p-3">
+                  <div className="space-y-1">
+                    {primaryLinks.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className="block rounded-xl px-4 py-3 text-sm font-medium text-foreground/80 transition-all hover:bg-secondary hover:text-foreground"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Loans Section - Collapsible */}
+                <div className="mb-3 rounded-2xl border border-border/30 bg-card/40 p-3">
+                  <button
+                    onClick={() =>
+                      setExpandedSection(
+                        expandedSection === "loans" ? null : "loans",
+                      )
+                    }
+                    className="flex w-full items-center justify-between rounded-xl hover:bg-secondary/50 px-2 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      🏦 Loans ({loanTypes.length})
+                    </p>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        expandedSection === "loans" ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {expandedSection === "loans" && (
+                    <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                      {loanTypes.map((loan) => (
+                        <Link
+                          key={loan.href}
+                          to={loan.href}
+                          className="rounded-lg px-3 py-2.5 text-sm text-foreground/80 transition-all hover:bg-primary/10 hover:text-foreground"
+                        >
+                          {loan.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Insurance Section - Collapsible */}
+                <div className="mb-3 rounded-2xl border border-border/30 bg-card/40 p-3">
+                  <button
+                    onClick={() =>
+                      setExpandedSection(
+                        expandedSection === "insurance" ? null : "insurance",
+                      )
+                    }
+                    className="flex w-full items-center justify-between rounded-xl hover:bg-secondary/50 px-2 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      🛡️ Insurance ({insuranceTypes.length})
+                    </p>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        expandedSection === "insurance" ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {expandedSection === "insurance" && (
+                    <div className="mt-2 space-y-1">
+                      <Link
+                        to="/apply/insurance"
+                        className="block rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary/15"
+                      >
+                        Apply for Insurance
+                      </Link>
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {insuranceTypes.map((insurance) => (
+                          <Link
+                            key={insurance.href}
+                            to={insurance.href}
+                            className="rounded-lg px-3 py-2.5 text-sm text-foreground/80 transition-all hover:bg-primary/10 hover:text-foreground"
+                          >
+                            {insurance.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Account Section */}
+                <div className="rounded-2xl border border-border/30 bg-card/40 p-3">
+                  <div className="flex items-center justify-between rounded-xl px-2 py-2">
+                    <span className="text-sm font-medium text-foreground/80">
+                      👤 {isAuthenticated ? "Signed in" : "Account"}
+                    </span>
+                    {isAuthenticated ? (
+                      <button
+                        className="text-sm font-semibold text-destructive transition-colors hover:text-destructive/80"
+                        onClick={() => void handleLogout()}
+                      >
+                        Logout
+                      </button>
+                    ) : (
+                      <Link
+                        to="/auth"
+                        className="text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                      >
+                        Login
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

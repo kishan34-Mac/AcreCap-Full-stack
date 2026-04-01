@@ -335,8 +335,10 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const normalizedEmail = normalizeEmail(parsed.data.email);
       const audience = parsed.data.audience ?? "user";
-      
-      console.log(`[AUTH] 🔐 Login attempt: email=${normalizedEmail}, audience=${audience}`);
+
+      console.log(
+        `[AUTH] 🔐 Login attempt: email=${normalizedEmail}, audience=${audience}`,
+      );
 
       if (audience === "user" && isReservedAdminEmail(normalizedEmail)) {
         console.log(`[AUTH] ⛔ Reserved admin email used with user audience`);
@@ -348,11 +350,15 @@ export async function registerRoutes(app: Express): Promise<void> {
         parsed.data.password,
       );
       if (!user) {
-        console.log(`[AUTH] ❌ Credential verification failed for ${normalizedEmail}`);
+        console.log(
+          `[AUTH] ❌ Credential verification failed for ${normalizedEmail}`,
+        );
         return res.status(401).json({ error: "invalid_credentials" });
       }
-      
-      console.log(`[AUTH] ✅ Credentials verified. User: ${user.email}, Role: ${user.role}`);
+
+      console.log(
+        `[AUTH] ✅ Credentials verified. User: ${user.email}, Role: ${user.role}`,
+      );
 
       if (audience === "user" && user.role === "admin") {
         console.log(`[AUTH] ⛔ Admin user tried to login as regular user`);

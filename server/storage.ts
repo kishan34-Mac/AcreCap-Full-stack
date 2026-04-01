@@ -6,14 +6,20 @@ import { connectMongo } from "./mongo";
 const userSchema = new Schema(
   {
     name: { type: String, trim: true, default: "" },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
     phone: { type: String, trim: true, default: "" },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     resetPasswordTokenHash: { type: String, default: null },
     resetPasswordExpiresAt: { type: Date, default: null },
   },
-  { timestamps: true, bufferCommands: false }
+  { timestamps: true, bufferCommands: false },
 );
 
 const submissionSchema = new Schema(
@@ -46,9 +52,13 @@ const submissionSchema = new Schema(
     notes: { type: String, default: null, trim: true },
     panNumber: { type: String, default: null },
     gstNumber: { type: String, default: null },
-    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
   },
-  { timestamps: true, bufferCommands: false }
+  { timestamps: true, bufferCommands: false },
 );
 
 const activityLogSchema = new Schema(
@@ -57,19 +67,19 @@ const activityLogSchema = new Schema(
     action: { type: String, required: true, trim: true },
     data: { type: Schema.Types.Mixed, default: {} },
   },
-  { timestamps: true, bufferCommands: false }
+  { timestamps: true, bufferCommands: false },
 );
 
 type UserDocument = InferSchemaType<typeof userSchema>;
 type SubmissionDocument = InferSchemaType<typeof submissionSchema>;
 type ActivityLogDocument = InferSchemaType<typeof activityLogSchema>;
 
-const UserModel =
-  mongoose.models.User || mongoose.model("User", userSchema);
+const UserModel = mongoose.models.User || mongoose.model("User", userSchema);
 const SubmissionModel =
   mongoose.models.Submission || mongoose.model("Submission", submissionSchema);
 const ActivityLogModel =
-  mongoose.models.ActivityLog || mongoose.model("ActivityLog", activityLogSchema);
+  mongoose.models.ActivityLog ||
+  mongoose.model("ActivityLog", activityLogSchema);
 
 export interface User {
   id: string;
@@ -221,13 +231,18 @@ export interface IStorage {
   createUser(user: CreateUserInput): Promise<User>;
   updateUser(id: string, updates: UpdateUserInput): Promise<User | null>;
   verifyUser(email: string, password: string): Promise<User | null>;
-  createPasswordResetToken(email: string): Promise<{ user: User; token: string } | null>;
+  createPasswordResetToken(
+    email: string,
+  ): Promise<{ user: User; token: string } | null>;
   resetPasswordWithToken(token: string, password: string): Promise<User | null>;
   getSubmissions(): Promise<Submission[]>;
   getSubmissionsByUser(userId: string): Promise<Submission[]>;
   getSubmission(id: string): Promise<Submission | null>;
   createSubmission(submission: CreateSubmissionInput): Promise<Submission>;
-  updateSubmissionStatus(id: string, status: Submission["status"]): Promise<Submission | null>;
+  updateSubmissionStatus(
+    id: string,
+    status: Submission["status"],
+  ): Promise<Submission | null>;
   createActivityLog(log: CreateActivityLogInput): Promise<ActivityLog>;
   getActivityLogs(): Promise<ActivityLog[]>;
 }
@@ -308,19 +323,21 @@ export class DatabaseStorage implements IStorage {
         ...(updates.phone !== undefined ? { phone: updates.phone.trim() } : {}),
         ...(updates.role !== undefined ? { role: updates.role } : {}),
       },
-      { new: true }
+      { new: true },
     );
     return updated ? serializeUser(updated) : null;
   }
 
   async verifyUser(email: string, password: string): Promise<User | null> {
     await this.ensureReady();
-    const user = await UserModel.findOne({ email: email.trim().toLowerCase() }).lean();
+    const user = await UserModel.findOne({
+      email: email.trim().toLowerCase(),
+    }).lean();
     if (!user) {
       console.log(`[STORAGE] ❌ User not found: ${email}`);
       return null;
     }
-    
+
     console.log(`[STORAGE] 🔍 User found: ${user.email}, Role: ${user.role}`);
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
@@ -328,12 +345,14 @@ export class DatabaseStorage implements IStorage {
       console.log(`[STORAGE] ❌ Password mismatch for ${user.email}`);
       return null;
     }
-    
+
     console.log(`[STORAGE] ✅ Password verified for ${user.email}`);
     return serializeUser(user);
   }
 
-  async createPasswordResetToken(email: string): Promise<{ user: User; token: string } | null> {
+  async createPasswordResetToken(
+    email: string,
+  ): Promise<{ user: User; token: string } | null> {
     await this.ensureReady();
     const normalizedEmail = email.trim().toLowerCase();
     const user = await UserModel.findOne({ email: normalizedEmail });
@@ -349,7 +368,10 @@ export class DatabaseStorage implements IStorage {
     return { user: serializeUser(user), token };
   }
 
-  async resetPasswordWithToken(token: string, password: string): Promise<User | null> {
+  async resetPasswordWithToken(
+    token: string,
+    password: string,
+  ): Promise<User | null> {
     await this.ensureReady();
     const tokenHash = this.hashResetToken(token);
     const user = await UserModel.findOne({
@@ -387,7 +409,9 @@ export class DatabaseStorage implements IStorage {
     return submission ? serializeSubmission(submission) : null;
   }
 
-  async createSubmission(submission: CreateSubmissionInput): Promise<Submission> {
+  async createSubmission(
+    submission: CreateSubmissionInput,
+  ): Promise<Submission> {
     await this.ensureReady();
     const created = await SubmissionModel.create({
       ...submission,
@@ -413,12 +437,15 @@ export class DatabaseStorage implements IStorage {
     return serializeSubmission(created);
   }
 
-  async updateSubmissionStatus(id: string, status: Submission["status"]): Promise<Submission | null> {
+  async updateSubmissionStatus(
+    id: string,
+    status: Submission["status"],
+  ): Promise<Submission | null> {
     await this.ensureReady();
     const updated = await SubmissionModel.findByIdAndUpdate(
       id,
       { status },
-      { new: true }
+      { new: true },
     );
     return updated ? serializeSubmission(updated) : null;
   }
