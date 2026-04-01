@@ -34,13 +34,34 @@ const loanTypes = [
 ];
 
 const insuranceTypes = [
-  { name: "Motor Insurance", href: "/apply/insurance?category=Motor%20Insurance" },
-  { name: "Health Insurance", href: "/apply/insurance?category=Health%20Insurance" },
-  { name: "Travel Insurance", href: "/apply/insurance?category=Travel%20Insurance" },
-  { name: "Fire Insurance", href: "/apply/insurance?category=Fire%20Insurance" },
-  { name: "Marine Insurance", href: "/apply/insurance?category=Marine%20Insurance" },
-  { name: "Workmen Compensation", href: "/apply/insurance?category=Workmen%20Compensation" },
-  { name: "Life Insurance", href: "/apply/insurance?category=Life%20Insurance" },
+  {
+    name: "Motor Insurance",
+    href: "/apply/insurance?category=Motor%20Insurance",
+  },
+  {
+    name: "Health Insurance",
+    href: "/apply/insurance?category=Health%20Insurance",
+  },
+  {
+    name: "Travel Insurance",
+    href: "/apply/insurance?category=Travel%20Insurance",
+  },
+  {
+    name: "Fire Insurance",
+    href: "/apply/insurance?category=Fire%20Insurance",
+  },
+  {
+    name: "Marine Insurance",
+    href: "/apply/insurance?category=Marine%20Insurance",
+  },
+  {
+    name: "Workmen Compensation",
+    href: "/apply/insurance?category=Workmen%20Compensation",
+  },
+  {
+    name: "Life Insurance",
+    href: "/apply/insurance?category=Life%20Insurance",
+  },
 ];
 
 const primaryLinks = [
@@ -57,6 +78,8 @@ export const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const { isAuthenticated, isAdmin, logout } = useAuth();
+  const [isLoansOpen, setIsLoansOpen] = useState(false);
+  const [isInsuranceOpen, setIsInsuranceOpen] = useState(false);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -123,7 +146,10 @@ export const Navbar = () => {
               >
                 {loanTypes.map((loan) => (
                   <DropdownMenuItem key={loan.href} asChild>
-                    <Link to={loan.href} className="cursor-pointer font-semibold">
+                    <Link
+                      to={loan.href}
+                      className="cursor-pointer font-semibold"
+                    >
                       {loan.name}
                     </Link>
                   </DropdownMenuItem>
@@ -140,13 +166,19 @@ export const Navbar = () => {
                 className="w-56 border-border/50 bg-card/95 backdrop-blur-xl"
               >
                 <DropdownMenuItem asChild>
-                  <Link to="/apply/insurance" className="cursor-pointer font-semibold text-primary">
+                  <Link
+                    to="/apply/insurance"
+                    className="cursor-pointer font-semibold text-primary"
+                  >
                     Apply for Insurance
                   </Link>
                 </DropdownMenuItem>
                 {insuranceTypes.map((insurance) => (
                   <DropdownMenuItem key={insurance.href} asChild>
-                    <Link to={insurance.href} className="cursor-pointer font-semibold">
+                    <Link
+                      to={insurance.href}
+                      className="cursor-pointer font-semibold"
+                    >
                       {insurance.name}
                     </Link>
                   </DropdownMenuItem>

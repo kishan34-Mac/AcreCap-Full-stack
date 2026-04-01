@@ -72,7 +72,9 @@ const submissionSchema = z.discriminatedUnion("applicationType", [
   insuranceSubmissionSchema,
 ]);
 
-const serializeSessionUser = (user: Awaited<ReturnType<typeof storage.getUser>>) =>
+const serializeSessionUser = (
+  user: Awaited<ReturnType<typeof storage.getUser>>,
+) =>
   user
     ? {
         id: user.id,
@@ -85,7 +87,9 @@ const serializeSessionUser = (user: Awaited<ReturnType<typeof storage.getUser>>)
 
 const isDatabaseUnavailable = (error: unknown) => {
   const message =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
   return (
     message.includes("mongoose") ||
     message.includes("mongo") ||
@@ -125,6 +129,11 @@ const sendPasswordResetEmail = async ({
   link: string;
   audience: "user" | "admin";
 }) => {
+  const timestamp = new Date().toISOString();
+  console.log(
+    `[${timestamp}] 📧 [EMAIL] Starting password reset email process for ${email}`,
+  );
+
   const safeName = escapeHtml(name || "there");
   const safeLink = escapeHtml(link);
   const subject =
@@ -136,7 +145,18 @@ const sendPasswordResetEmail = async ({
   const smtpPass = process.env.SMTP_PASS?.trim();
   const smtpFrom = process.env.SMTP_FROM?.trim() || smtpUser;
   const smtpSecure =
-    process.env.SMTP_SECURE?.trim().toLowerCase() === "true" || smtpPort === 465;
+    process.env.SMTP_SECURE?.trim().toLowerCase() === "true" ||
+    smtpPort === 465;
+
+  console.log(`[${timestamp}] 📋 [EMAIL] Configuration check:
+    - SMTP Host: ${smtpHost ? "✓ Configured" : "✗ Missing"}
+    - SMTP Port: ${smtpPort}
+    - SMTP User: ${smtpUser ? "✓ Configured" : "✗ Missing"}
+    - SMTP Pass: ${smtpPass ? "✓ Configured" : "✗ Missing"}
+    - SMTP From: ${smtpFrom}
+    - SMTP Secure: ${smtpSecure}
+    - Webhook URL: ${webhook ? "✓ Configured" : "✗ Not set"}`);
+
   const html = `
     <html>
       <body style="font-family: Arial, sans-serif; background: #f5f7f8; padding: 24px; color: #12251b;">
@@ -158,33 +178,49 @@ const sendPasswordResetEmail = async ({
   const text = `Hello ${name || "there"},\n\nUse this link to reset your password: ${link}\n\nThis link expires in 30 minutes.`;
 
   if (smtpHost && smtpFrom) {
+    console.log(
+      `[${timestamp}] 🔌 [EMAIL] Using SMTP configuration to send email`,
+    );
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: Number.isFinite(smtpPort) ? smtpPort : 587,
       secure: smtpSecure,
-      auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+      auth:
+        smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
     });
 
     try {
-      await transporter.sendMail({
+      console.log(`[${timestamp}] 📤 [EMAIL] Attempting to send via SMTP...`);
+      const info = await transporter.sendMail({
         from: smtpFrom,
         to: email,
         subject,
         html,
         text,
       });
+      console.log(
+        `[${timestamp}] ✅ [EMAIL] Email sent successfully! Message ID: ${info.messageId}`,
+      );
       return;
     } catch (error) {
-      throw new Error(
-        `password_reset_email_failed:${error instanceof Error ? error.message : String(error)}`
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(
+        `[${timestamp}] ❌ [EMAIL] SMTP Error sending to ${email}: ${errorMsg}`,
       );
+      throw new Error(`password_reset_email_failed:${errorMsg}`);
     }
   }
 
   if (!webhook) {
+    console.error(
+      `[${timestamp}] ⚠️  [EMAIL] Neither SMTP nor webhook configured!`,
+    );
     throw new Error("password_reset_email_not_configured");
   }
 
+  console.log(
+    `[${timestamp}] 🔗 [EMAIL] Using webhook to send email: ${webhook}`,
+  );
   const response = await fetch(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -197,12 +233,20 @@ const sendPasswordResetEmail = async ({
       meta: { audience },
     }),
   }).catch((error) => {
-    throw new Error(`password_reset_email_failed:${error instanceof Error ? error.message : String(error)}`);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[${timestamp}] ❌ [EMAIL] Webhook request failed: ${errorMsg}`,
+    );
+    throw new Error(`password_reset_email_failed:${errorMsg}`);
   });
 
   if (!response.ok) {
+    console.error(
+      `[${timestamp}] ❌ [EMAIL] Webhook returned status ${response.status}`,
+    );
     throw new Error(`password_reset_email_failed:${response.status}`);
   }
+  console.log(`[${timestamp}] ✅ [EMAIL] Email sent via webhook successfully`);
 };
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -238,11 +282,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.post("/api/auth/signup", async (req, res) => {
-    const parsed = authSchema.extend({
-      name: z.string().trim().min(2).max(120),
-    }).safeParse(req.body);
+    const parsed = authSchema
+      .extend({
+        name: z.string().trim().min(2).max(120),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
@@ -256,7 +304,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(409).json({ error: "email_already_registered" });
       }
 
-      const user = await storage.createUser({ ...parsed.data, email: normalizedEmail });
+      const user = await storage.createUser({
+        ...parsed.data,
+        email: normalizedEmail,
+      });
       req.session.user = { id: user.id, email: user.email, role: user.role };
       const token = signAuthToken(req.session.user);
       persistSessionInBackground(req);
@@ -275,33 +326,48 @@ export async function registerRoutes(app: Express): Promise<void> {
       .extend({ audience: authAudienceSchema.optional() })
       .safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      console.log("[AUTH] ❌ Login validation failed:", parsed.error.flatten());
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
       const normalizedEmail = normalizeEmail(parsed.data.email);
       const audience = parsed.data.audience ?? "user";
+      
+      console.log(`[AUTH] 🔐 Login attempt: email=${normalizedEmail}, audience=${audience}`);
 
       if (audience === "user" && isReservedAdminEmail(normalizedEmail)) {
+        console.log(`[AUTH] ⛔ Reserved admin email used with user audience`);
         return res.status(403).json({ error: "admin_login_required" });
       }
 
-      const user = await storage.verifyUser(normalizedEmail, parsed.data.password);
+      const user = await storage.verifyUser(
+        normalizedEmail,
+        parsed.data.password,
+      );
       if (!user) {
+        console.log(`[AUTH] ❌ Credential verification failed for ${normalizedEmail}`);
         return res.status(401).json({ error: "invalid_credentials" });
       }
+      
+      console.log(`[AUTH] ✅ Credentials verified. User: ${user.email}, Role: ${user.role}`);
 
       if (audience === "user" && user.role === "admin") {
+        console.log(`[AUTH] ⛔ Admin user tried to login as regular user`);
         return res.status(403).json({ error: "admin_login_required" });
       }
 
       if (audience === "admin" && user.role !== "admin") {
+        console.log(`[AUTH] ⛔ Non-admin user tried to access admin panel`);
         return res.status(403).json({ error: "admin_access_required" });
       }
 
       req.session.user = { id: user.id, email: user.email, role: user.role };
       const token = signAuthToken(req.session.user);
       persistSessionInBackground(req);
+      console.log(`[AUTH] ✅ Login successful: ${user.email} (${user.role})`);
       return res.json({ user: serializeSessionUser(user), token });
     } catch (error: any) {
       if (isDatabaseUnavailable(error)) {
@@ -324,26 +390,57 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.post("/api/auth/forgot-password", async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] 🔑 [FORGOT-PASSWORD] Request received`);
+
     const parsed = forgotPasswordSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      console.warn(
+        `[${timestamp}] ⚠️  [FORGOT-PASSWORD] Validation failed:`,
+        parsed.error.flatten(),
+      );
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     const email = normalizeEmail(parsed.data.email);
     const audience = parsed.data.audience ?? "user";
+    console.log(
+      `[${timestamp}] 👤 [FORGOT-PASSWORD] Processing for: ${email} (audience: ${audience})`,
+    );
 
     try {
       const user = await storage.getUserByEmail(email);
+      if (!user) {
+        console.log(
+          `[${timestamp}] ℹ️  [FORGOT-PASSWORD] User not found: ${email}`,
+        );
+      } else {
+        console.log(
+          `[${timestamp}] ✓ [FORGOT-PASSWORD] User found: ${user.name} (role: ${user.role})`,
+        );
+      }
+
       const shouldIssueReset =
         !!user &&
         ((audience === "admin" && user.role === "admin") ||
-          (audience === "user" && user.role !== "admin" && !isReservedAdminEmail(email)));
+          (audience === "user" &&
+            user.role !== "admin" &&
+            !isReservedAdminEmail(email)));
 
       if (shouldIssueReset) {
+        console.log(
+          `[${timestamp}] 🔓 [FORGOT-PASSWORD] Issuing password reset token...`,
+        );
         const reset = await storage.createPasswordResetToken(email);
         if (reset) {
           const token = reset.token;
           const resetLink = `${getAppBaseUrl().replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}&audience=${audience}&nonce=${crypto.randomUUID()}`;
+          console.log(
+            `[${timestamp}] 🔗 [FORGOT-PASSWORD] Reset link generated: ${resetLink.substring(0, 80)}...`,
+          );
+
           await sendPasswordResetEmail({
             email: reset.user.email,
             name: reset.user.name,
@@ -351,21 +448,47 @@ export async function registerRoutes(app: Express): Promise<void> {
             audience,
           });
         }
+      } else {
+        if (user) {
+          console.log(
+            `[${timestamp}] ⚠️  [FORGOT-PASSWORD] User exists but wrong audience/role`,
+          );
+        }
       }
 
+      console.log(
+        `[${timestamp}] ✅ [FORGOT-PASSWORD] Response sent (security: hiding user existence)`,
+      );
       return res.json({ ok: true });
     } catch (error: any) {
+      const errorMsg = error?.message || String(error);
+      console.error(`[${timestamp}] ❌ [FORGOT-PASSWORD] Error: ${errorMsg}`);
+
       if (error instanceof Error) {
         if (error.message === "password_reset_email_not_configured") {
-          return res.status(503).json({ error: "password_reset_email_not_configured" });
+          console.error(
+            `[${timestamp}] 🔧 [FORGOT-PASSWORD] Email service not configured`,
+          );
+          return res
+            .status(503)
+            .json({ error: "password_reset_email_not_configured" });
         }
         if (error.message.startsWith("password_reset_email_failed:")) {
+          console.error(
+            `[${timestamp}] 📧 [FORGOT-PASSWORD] Email delivery failed: ${error.message}`,
+          );
           return res.status(502).json({ error: "password_reset_email_failed" });
         }
       }
       if (isDatabaseUnavailable(error)) {
+        console.error(
+          `[${timestamp}] 🗄️  [FORGOT-PASSWORD] Database unavailable`,
+        );
         return res.status(503).json({ error: "database_unavailable" });
       }
+      console.error(
+        `[${timestamp}] ⚠️  [FORGOT-PASSWORD] Unexpected error: ${errorMsg}`,
+      );
       return res.status(500).json({ error: error.message });
     }
   });
@@ -373,11 +496,16 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/auth/reset-password", async (req, res) => {
     const parsed = resetPasswordSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
-      const user = await storage.resetPasswordWithToken(parsed.data.token, parsed.data.password);
+      const user = await storage.resetPasswordWithToken(
+        parsed.data.token,
+        parsed.data.password,
+      );
       if (!user) {
         return res.status(400).json({ error: "invalid_or_expired_token" });
       }
@@ -403,7 +531,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.put("/api/users/me", requireAuth, async (req, res) => {
     const parsed = profileUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
@@ -426,13 +556,21 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/users/role", requireAdmin, async (req, res) => {
     const parsed = roleUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
-      const profile = await storage.updateUser(parsed.data.userId, { role: parsed.data.role });
+      const profile = await storage.updateUser(parsed.data.userId, {
+        role: parsed.data.role,
+      });
       if (req.userId === parsed.data.userId && profile) {
-        req.session.user = { id: profile.id, email: profile.email, role: profile.role };
+        req.session.user = {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+        };
       }
       return res.json({ profile });
     } catch (error: any) {
@@ -441,12 +579,16 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.post("/api/activity", async (req, res) => {
-    const parsed = z.object({
-      action: z.string().min(1).max(120),
-      data: z.record(z.any()).optional(),
-    }).safeParse(req.body);
+    const parsed = z
+      .object({
+        action: z.string().min(1).max(120),
+        data: z.record(z.any()).optional(),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
@@ -464,7 +606,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/submissions", requireAuth, async (req, res) => {
     const parsed = submissionSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ error: "validation_error", details: parsed.error.flatten() });
     }
 
     try {
@@ -514,10 +658,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
       const parsed = statusSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "validation_error", details: parsed.error.flatten() });
+        return res
+          .status(400)
+          .json({ error: "validation_error", details: parsed.error.flatten() });
       }
 
-      const submission = await storage.updateSubmissionStatus(req.params.id, parsed.data.status);
+      const submission = await storage.updateSubmissionStatus(
+        req.params.id,
+        parsed.data.status,
+      );
       if (!submission) {
         return res.status(404).json({ error: "not_found" });
       }

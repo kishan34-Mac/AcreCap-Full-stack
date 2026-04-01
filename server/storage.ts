@@ -317,11 +317,20 @@ export class DatabaseStorage implements IStorage {
     await this.ensureReady();
     const user = await UserModel.findOne({ email: email.trim().toLowerCase() }).lean();
     if (!user) {
+      console.log(`[STORAGE] ❌ User not found: ${email}`);
       return null;
     }
+    
+    console.log(`[STORAGE] 🔍 User found: ${user.email}, Role: ${user.role}`);
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
-    return isValid ? serializeUser(user) : null;
+    if (!isValid) {
+      console.log(`[STORAGE] ❌ Password mismatch for ${user.email}`);
+      return null;
+    }
+    
+    console.log(`[STORAGE] ✅ Password verified for ${user.email}`);
+    return serializeUser(user);
   }
 
   async createPasswordResetToken(email: string): Promise<{ user: User; token: string } | null> {
