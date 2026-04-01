@@ -4,19 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { Phone, Mail, Clock, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const contactInfo = [
   {
-    icon: MapPin,
-    title: "Visit Us",
-    details: ["123 Finance Street", "Business District", "Mumbai 400001"],
-  },
-  {
     icon: Phone,
     title: "Call Us",
-    details: ["+91 99999 99999", "+91 88888 88888"],
+    details: ["+91 84608 47083"],
   },
   {
     icon: Mail,
@@ -195,18 +190,6 @@ export default function Contact() {
                 </form>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Map Section */}
-      <section className="bg-secondary">
-        <div className="flex h-72 w-full items-center justify-center sm:h-80 md:h-96">
-          <div className="text-center">
-            <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Interactive map would be displayed here
-            </p>
           </div>
         </div>
       </section>

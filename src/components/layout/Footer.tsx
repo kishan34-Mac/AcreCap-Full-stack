@@ -3,7 +3,6 @@ import {
   Leaf,
   Phone,
   Mail,
-  MapPin,
   Facebook,
   Twitter,
   Linkedin,
@@ -125,19 +124,13 @@ export const Footer = () => {
               Contact Us
             </h3>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-muted-foreground">
-                  123 Finance Street, Business District, Mumbai 400001
-                </span>
-              </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-primary" />
                 <a
-                  href="tel:+919999999999"
+                  href="tel:+918460847083"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  +91 99999 99999
+                  +91 84608 47083
                 </a>
               </li>
               <li className="flex items-center gap-3">
