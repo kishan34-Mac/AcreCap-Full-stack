@@ -14,33 +14,58 @@ const app = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
+const expandOriginVariants = (origin?: string | null): string[] => {
+  if (!origin) return [];
+
+  try {
+    const url = new URL(origin);
+    const variants = new Set<string>([url.origin]);
+
+    if (url.hostname.startsWith("www.")) {
+      variants.add(`${url.protocol}//${url.hostname.replace(/^www\./, "")}`);
+    } else if (!url.hostname.includes("localhost") && !url.hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+      variants.add(`${url.protocol}//www.${url.hostname}`);
+    }
+
+    return [...variants];
+  } catch {
+    return [origin];
+  }
+};
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  ...expandOriginVariants(process.env.FRONTEND_URL),
+  ...expandOriginVariants(
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
+  ),
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-].filter(Boolean) as string[];
+];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
 
-    if (
-      allowedOrigins.includes(origin) ||
-      /\.vercel\.app$/.test(new URL(origin).hostname)
-    ) {
-      callback(null, true);
-      return;
-    }
+      try {
+        const hostname = new URL(origin).hostname;
+        if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(hostname)) {
+          callback(null, true);
+          return;
+        }
+      } catch {
+        // Ignore invalid origins and fail below.
+      }
 
-    callback(new Error("CORS not allowed"));
-  },
-  credentials: true,
-}));
+      callback(new Error("CORS not allowed"));
+    },
+    credentials: true,
+  })
+);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
