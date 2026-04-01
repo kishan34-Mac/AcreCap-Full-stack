@@ -480,7 +480,7 @@ export default function InsurancePage() {
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
                 <Button variant="hero" size="lg" className="w-full sm:w-auto" asChild>
-                  <Link to="/apply?type=insurance">
+                  <Link to="/apply/insurance">
                     Get Quote
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -719,7 +719,7 @@ export default function InsurancePage() {
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
               asChild
             >
-              <Link to="/apply?type=insurance">
+              <Link to="/apply/insurance">
                 Get Free Quote
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>

@@ -15,7 +15,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { z } from "zod";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { sendStatusEmail } from "@/lib/email";
 import { logActivity } from "@/lib/sync";
@@ -117,8 +117,12 @@ const emptyForm = {
 };
 
 export default function Apply() {
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
-  const initialType = params.get("type") === "insurance" ? "insurance" : "loan";
+  const initialType =
+    location.pathname === "/apply/insurance" || params.get("type") === "insurance"
+      ? "insurance"
+      : "loan";
   const [applicationType, setApplicationType] = useState<ApplicationType>(initialType);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(emptyForm);
@@ -218,7 +222,13 @@ export default function Apply() {
     setCurrentStep(1);
     setErrors({});
     setFormData(emptyForm);
-    setParams(type === "insurance" ? { type: "insurance" } : {});
+    if (type === "insurance") {
+      navigate("/apply/insurance", { replace: true });
+      setParams({ type: "insurance" });
+    } else {
+      navigate("/apply", { replace: true });
+      setParams({});
+    }
   };
 
   const handleNext = async () => {

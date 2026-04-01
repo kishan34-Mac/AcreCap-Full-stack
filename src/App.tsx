@@ -41,6 +41,14 @@ const App = () => (
               }
             />
             <Route
+              path="/apply/insurance"
+              element={
+                <ProtectedRoute>
+                  <Apply />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/thank-you"
               element={
                 <ProtectedRoute>

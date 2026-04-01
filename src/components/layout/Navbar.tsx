@@ -139,6 +139,11 @@ export const Navbar = () => {
                 align="start"
                 className="w-56 border-border/50 bg-card/95 backdrop-blur-xl"
               >
+                <DropdownMenuItem asChild>
+                  <Link to="/apply/insurance" className="cursor-pointer font-semibold text-primary">
+                    Apply for Insurance
+                  </Link>
+                </DropdownMenuItem>
                 {insuranceTypes.map((insurance) => (
                   <DropdownMenuItem key={insurance.href} asChild>
                     <Link to={insurance.href} className="cursor-pointer font-semibold">
@@ -275,6 +280,12 @@ export const Navbar = () => {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Insurance
                 </p>
+                <Link
+                  to="/apply/insurance"
+                  className="mb-2 block rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                >
+                  Apply for Insurance
+                </Link>
                 <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                   {insuranceTypes.map((insurance) => (
                     <Link
