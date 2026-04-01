@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,7 @@ const emptyForm = {
 export default function Apply() {
   const location = useLocation();
   const [params, setParams] = useSearchParams();
+  const selectedInsuranceCategory = params.get("category") || "";
   const initialType =
     location.pathname === "/apply/insurance" || params.get("type") === "insurance"
       ? "insurance"
@@ -137,6 +138,16 @@ export default function Apply() {
   );
 
   const totalSteps = steps.length;
+
+  useEffect(() => {
+    if (applicationType !== "insurance") return;
+    if (!selectedInsuranceCategory) return;
+    setFormData((prev) => ({
+      ...prev,
+      insuranceCategory: selectedInsuranceCategory,
+    }));
+    setErrors((prev) => ({ ...prev, insuranceCategory: "" }));
+  }, [applicationType, selectedInsuranceCategory]);
 
   const validateField = (name: string, value: string) => {
     try {

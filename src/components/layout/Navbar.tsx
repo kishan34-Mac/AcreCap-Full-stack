@@ -34,13 +34,13 @@ const loanTypes = [
 ];
 
 const insuranceTypes = [
-  { name: "Motor Insurance", href: "/insurance/motor" },
-  { name: "Health Insurance", href: "/insurance/health" },
-  { name: "Travel Insurance", href: "/insurance/travel" },
-  { name: "Fire Insurance", href: "/insurance/fire" },
-  { name: "Marine Insurance", href: "/insurance/marine" },
-  { name: "Workmen Compensation", href: "/insurance/workmen" },
-  { name: "Life Insurance", href: "/insurance/life" },
+  { name: "Motor Insurance", href: "/apply/insurance?category=Motor%20Insurance" },
+  { name: "Health Insurance", href: "/apply/insurance?category=Health%20Insurance" },
+  { name: "Travel Insurance", href: "/apply/insurance?category=Travel%20Insurance" },
+  { name: "Fire Insurance", href: "/apply/insurance?category=Fire%20Insurance" },
+  { name: "Marine Insurance", href: "/apply/insurance?category=Marine%20Insurance" },
+  { name: "Workmen Compensation", href: "/apply/insurance?category=Workmen%20Compensation" },
+  { name: "Life Insurance", href: "/apply/insurance?category=Life%20Insurance" },
 ];
 
 const primaryLinks = [
