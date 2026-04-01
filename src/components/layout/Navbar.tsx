@@ -51,6 +51,7 @@ const primaryLinks = [
 
 export const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openMobileSection, setOpenMobileSection] = useState<"loans" | "insurance" | null>(null);
   const location = useLocation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ export const Navbar = () => {
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setOpenMobileSection(null);
   }, [location.pathname]);
 
   const handleLogout = async () => {
@@ -84,6 +86,18 @@ export const Navbar = () => {
     : { label: "Admin", href: "/admin/login", icon: Shield };
 
   const adminLink = isAdmin ? "/admin" : "/admin/login";
+  const mobilePrimaryLinks = [
+    { label: "Home", href: "/" },
+    { label: "About Us", href: "/about" },
+    { label: "Contact", href: "/contact" },
+    { label: "Apply Now", href: "/apply" },
+  ];
+  const mobileLinkClass = (href: string) =>
+    `block rounded-3xl px-5 py-4 text-xl font-medium transition-colors ${
+      location.pathname === href
+        ? "bg-accent/15 text-accent"
+        : "text-foreground/75 hover:bg-white/5 hover:text-foreground"
+    }`;
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/50 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
@@ -225,99 +239,137 @@ export const Navbar = () => {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="animate-fade-in border-t border-border/50 pb-5 pt-4 lg:hidden">
-            <div className="rounded-3xl border border-border/50 bg-card/80 p-3 shadow-soft backdrop-blur-xl">
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <Button variant="accent" className="w-full" asChild>
-                  <Link to="/apply">
-                    Apply Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to={adminLink}>Admin</Link>
-                </Button>
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            <div className="absolute inset-0 bg-[#0f1318]/95 backdrop-blur-xl" />
+            <div className="absolute inset-x-0 top-0 border-b border-white/10 bg-[linear-gradient(180deg,rgba(247,165,26,0.12),rgba(247,165,26,0.02)_65%,transparent)] px-4 pb-6 pt-6">
+              <div className="mx-auto flex max-w-7xl items-center justify-between">
+                <Link
+                  to="/"
+                  className="flex min-w-0 items-center gap-3"
+                  aria-label="AcreCap home"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent shadow-[0_0_30px_rgba(247,165,26,0.15)]">
+                    <Leaf className="h-6 w-6" />
+                  </div>
+                  <span className="truncate text-3xl font-bold text-white">
+                    AcreCap<span className="text-accent">Finance</span>
+                  </span>
+                </Link>
+
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                  aria-label="Close menu"
+                >
+                  <X className="h-8 w-8" />
+                </button>
               </div>
+            </div>
 
-              {isAuthenticated && !isAdmin && (
-                <div className="mb-3">
-                  <Button variant="secondary" className="w-full" asChild>
-                    <Link to={actionLink.href}>{actionLink.label}</Link>
-                  </Button>
-                </div>
-              )}
-
-              <div className="grid gap-1">
-                {primaryLinks.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className="rounded-2xl px-4 py-3 text-sm font-medium text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                  >
+            <div className="relative mx-auto flex h-full max-w-7xl flex-col overflow-y-auto px-4 pb-6 pt-32">
+              <div className="space-y-2">
+                {mobilePrimaryLinks.map((item) => (
+                  <Link key={item.href} to={item.href} className={mobileLinkClass(item.href)}>
                     {item.label}
                   </Link>
                 ))}
-              </div>
 
-              <div className="mt-4 rounded-2xl bg-background/50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Loans
-                </p>
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {loanTypes.map((loan) => (
-                    <Link
-                      key={loan.href}
-                      to={loan.href}
-                      className="rounded-xl px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      {loan.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl bg-background/50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Insurance
-                </p>
-                <Link
-                  to="/apply/insurance"
-                  className="mb-2 block rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                <button
+                  onClick={() =>
+                    setOpenMobileSection((current) => (current === "loans" ? null : "loans"))
+                  }
+                  className={`flex w-full items-center justify-between rounded-3xl px-5 py-4 text-left text-xl font-medium transition-colors ${
+                    openMobileSection === "loans"
+                      ? "bg-white/5 text-white"
+                      : "text-foreground/75 hover:bg-white/5 hover:text-foreground"
+                  }`}
                 >
-                  Apply for Insurance
-                </Link>
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {insuranceTypes.map((insurance) => (
-                    <Link
-                      key={insurance.href}
-                      to={insurance.href}
-                      className="rounded-xl px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
-                    >
-                      {insurance.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+                  <span>Loans</span>
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform ${
+                      openMobileSection === "loans" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openMobileSection === "loans" && (
+                  <div className="space-y-1 pb-2 pl-3">
+                    {loanTypes.map((loan) => (
+                      <Link
+                        key={loan.href}
+                        to={loan.href}
+                        className="block rounded-2xl px-4 py-3 text-base text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                      >
+                        {loan.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
-              <div className="mt-3 flex items-center justify-between rounded-2xl bg-background/50 px-4 py-3">
-                <span className="text-sm font-medium text-foreground/80">
-                  {isAuthenticated ? "Signed in" : "Account"}
-                </span>
-                {isAuthenticated ? (
-                  <button
-                    className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-                    onClick={() => void handleLogout()}
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link
-                    to="/auth"
-                    className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-                  >
-                    Login
+                <button
+                  onClick={() =>
+                    setOpenMobileSection((current) =>
+                      current === "insurance" ? null : "insurance"
+                    )
+                  }
+                  className={`flex w-full items-center justify-between rounded-3xl px-5 py-4 text-left text-xl font-medium transition-colors ${
+                    openMobileSection === "insurance"
+                      ? "bg-white/5 text-white"
+                      : "text-foreground/75 hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <span>Insurance</span>
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform ${
+                      openMobileSection === "insurance" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openMobileSection === "insurance" && (
+                  <div className="space-y-1 pb-2 pl-3">
+                    <Link
+                      to="/apply/insurance"
+                      className="block rounded-2xl bg-accent/15 px-4 py-3 text-base font-semibold text-accent"
+                    >
+                      Apply for Insurance
+                    </Link>
+                    {insuranceTypes.map((insurance) => (
+                      <Link
+                        key={insurance.href}
+                        to={insurance.href}
+                        className="block rounded-2xl px-4 py-3 text-base text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                      >
+                        {insurance.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                <Link to={adminLink} className={mobileLinkClass(adminLink)}>
+                  Admin
+                </Link>
+                {isAuthenticated && !isAdmin && (
+                  <Link to={actionLink.href} className={mobileLinkClass(actionLink.href)}>
+                    {actionLink.label}
                   </Link>
                 )}
+              </div>
+
+              <div className="mt-auto pt-8">
+                <div className="border-t border-white/10 pt-6">
+                  {isAuthenticated ? (
+                    <Button
+                      variant="accent"
+                      className="h-16 w-full rounded-3xl text-lg font-bold"
+                      onClick={() => void handleLogout()}
+                    >
+                      Logout
+                    </Button>
+                  ) : (
+                    <Button variant="accent" className="h-16 w-full rounded-3xl text-lg font-bold" asChild>
+                      <Link to="/auth">Login / Register</Link>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
